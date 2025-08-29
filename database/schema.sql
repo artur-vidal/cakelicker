@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS saves (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name TINYTEXT NOT NULL,
+    cakes TEXT UNIQUE NOT NULL,
+    xp INT(11) NOT NULL,
+    level INT(11) NOT NULL,
+    prestige INT(11) NOT NULL,
+    rebirths INT(11) NOT NULL,
+    savepath TINYTEXT NOT NULL,
+    dtcriacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(20) UNIQUE NOT NULL,
+    email TINYTEXT UNIQUE NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    nickname TINYTEXT NOT NULL,
+    idsave INT(11) NOT NULL,
+    dtnasc DATE NOT NULL,
+    dtcriacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (idsave) REFERENCES saves(id)
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token TINYTEXT NOT NULL,
+    idusuario INT(11) NOT NULL,
+    expiresat DATETIME NOT NULL,
+
+    FOREIGN KEY (idusuario) REFERENCES usuarios(id)
+);
