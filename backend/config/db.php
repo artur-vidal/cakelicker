@@ -19,7 +19,7 @@
 
     } catch (PDOException $err) {
         echo generate_response(false, 'PDO_ERROR', $err->getMessage());
-        exit();
+        exit;
     }
 
 ?>

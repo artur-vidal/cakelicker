@@ -5,33 +5,32 @@
 
     $data = json_decode(file_get_contents('php://input'), true);
 
-
     // regex de username (deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial)
     $username_expression = '/^[a-z0-9_]{3,20}(?=[a-z])/';
     if(!preg_match($username_expression, $data['username'])) {
         echo generate_response(false, 'INVALID_USERNAME', 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', $data);
-        exit();
+        exit;
     }
 
     // senha - pelo menos 8 caracteres e com número
     $password_expression = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/';
     if(!preg_match($password_expression, $data['password'])) {
         echo generate_response(false, 'INVALID_PASSWORD', 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', $data);
-        exit();
+        exit;
     } 
 
     // data de nascimento (formato YYYY-MM-DD)
     $dtnasc_expression = '/^\d{4}-\d{2}-\d{2}$/'; // Exemplo de regex para a data
     if(!preg_match($dtnasc_expression, $data['birthdate'])) {
         echo generate_response(false, 'INVALID_BIRTHDATE', 'Data de nascimento tem que estar em formato YYYY-MM-DD.', $data);
-        exit();
+        exit;
     }
 
     // email (exemplo@email.com)
     $email_expression = '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/';
     if(!preg_match($email_expression, $data['email'])) {
         echo generate_response(false, 'INVALID_EMAIL', 'E-mail precisa seguir formato padrão.', $data);
-        exit();
+        exit;
     }
 
     // se passar pela validação base, verifico se já existe usuário com esse user ou email🔥
@@ -42,14 +41,14 @@
         $same_user_query->execute();
     } catch (PDOException $err){
         echo generate_response(false, 'PDO_ERROR', $err->getMessage());
-        exit();
+        exit;
     }
 
     $same_user = $same_user_query->fetch(PDO::FETCH_ASSOC);
 
     if($same_user) {
         echo generate_response(false, 'USER_EXISTS', 'Já existe um usuário com esse @ ou e-mail registrado.', $data);
-        exit();
+        exit;
     }
 
     // se ainda passar por essa, registro os datas no databank
@@ -64,7 +63,7 @@
         file_put_contents($filename, json_encode([]));
     } catch (Exception $err) {
         echo generate_response(false, 'FILE_ERROR', $err->getMessage(), $data);
-        exit();
+        exit;
     }
     
     try {
@@ -73,7 +72,7 @@
         $save_stmt->execute();
     } catch (PDOException $err) {
         echo generate_response(false, 'PDO_ERROR', $err->getMessage());
-        exit();
+        exit;
     }
 
     // eu busco o id do save recém criado
@@ -83,11 +82,12 @@
         $save_id = $save_query->fetchAll(PDO::FETCH_ASSOC)[0]['id'];
     } catch (PDOException $err) {
         echo generate_response(false, 'PDO_ERROR', $err->getMessage());
-        exit();
+        exit;
     }
 
     // crio um usuário ligado ao id desse save
     try {
+
         $encrypted_password = password_hash($data['password'], PASSWORD_BCRYPT);
 
         $user_stmt = $conn->prepare('INSERT INTO usuarios(username, email, password, nickname, idsave, dtnasc) VALUES(:username, :email, :password, :nickname, :idsave, :dtnasc)');
