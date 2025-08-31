@@ -1,82 +1,62 @@
-import { apiPost } from "./api.js";
-import { getForm } from "./utils.js";
+import { login, register, logout, getSession } from "./api.js";
+import { getForm, logResponse } from "./utils.js";
 
 const USERID_KEY = "userid";
 const USERNAME_KEY = "username";
 const USERNICKNAME_KEY = "usernick";
 
-async function login() {
-    // procurando formulario
-    const form_data = getForm("#login-form");
+// adicionando listener no botão de LOGIN
+document.querySelector("#login-form").addEventListener("submit", async (e) => {
+    e.preventDefault(); // evita reload da página
+    
+    // pego dados do formulário e faço loginssss
+    const formData = getForm('#login-form');
+    const user = formData.get('user');
+    const password = formData.get('password');
 
-    // mandando pra rota de login e esperando resposta
-    const response = await apiPost("/login.php", {
-        "user" : form_data.get("user"), 
-        "password" : form_data.get("password")
-    });
+    const response = await login(user, password);
+    logResponse(response);
 
-    if(response) {
-        // console.log(`Resposta recebida.\n${JSON.stringify(response, null, 2)}`);
-        
-        // guardando dados do usuário recebidos se estiver tudo ok
-        if(response.code == "OK") {
-            document.querySelector("#user-nickname").textContent = response.data.nickname
-        }
+    if(response || response.code == 'OK') {
+        document.querySelector('#user-nickname').textContent = response.data.nickname
     }
 
-}
-
-// adicionando listener na ação submit
-document.querySelector("#login-form").addEventListener("submit", (e) => {
-    e.preventDefault(); // evita reload da página
-    login();
 });
 
-async function register() {
-    // procurando formulario
-    const form_data = getForm("#register-form");
-
-    // pegando dados e mandando pro servidor registrar
-    const userdata = {
-        "username" : form_data.get("username"),
-        "nickname" : form_data.get("nickname"),
-        "email" : form_data.get("email"),
-        "password" : form_data.get("password"),
-        "birthdate" : form_data.get("birthdate")
-    };
-
-    const response = apiPost("/register.php", userdata);
-
-    if(response) {
-        console.log(`Resposta recebida.\n${JSON.stringify(response, null, 2)}`);
-    }
-}
-
-// adicionando listener na ação submit
-document.querySelector("#register-form").addEventListener("submit", (e) => {
+// adicionando listener no botão de REGISTRAR
+document.querySelector("#register-form").addEventListener("submit", async (e) => {
     e.preventDefault(); // evita reload da página
-    register();
+    
+    // pego dados do formulário e faço loginssss
+    const formData = getForm('#register-form');
+    const username = formData.get('username');
+    const nickname = formData.get('nickname');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    const birthdate = formData.get('birthdate');
+
+    const response = await register(username, nickname, email, password, birthdate);
+    logResponse(response);
+
 });
 
-// manda pro PHP remover a sessão toda
-async function logout() {
-    const response = await apiPost('/remove_session.php');
-
-    if(response && response.code == "OK") {
-        document.querySelector("#user-nickname").textContent = "";
-    }
-}
-
-// adicionando listener na ação submit
-document.querySelector("#logout-button").addEventListener("click", (e) => {
+// adicionando listener no botão de SAIR
+document.querySelector("#logout-button").addEventListener("click", async (e) => {
     e.preventDefault(); // evita reload da página
-    logout();
+
+    const response = await logout();
+    logResponse(response);
+
+    
+    if(response || response.code == 'OK') {
+        document.querySelector('#user-nickname').textContent = ''
+    }
 });
 
 // tentando carregar sessão quando carregar a página
 document.addEventListener('DOMContentLoaded', async () => {
     
-    const session_response = await apiPost("/load_session.php");
-    if(session_response) document.querySelector("#user-nickname").textContent = session_response.data.nickname
+    const session_response = await getSession();
+    if(session_response && session_response.code == "OK") document.querySelector("#user-nickname").textContent = session_response.data.nickname
 
 })
