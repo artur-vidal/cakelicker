@@ -10,7 +10,7 @@
 
             // se não existir token de sessão, já cancelo a função, se liga meu irmão 😎
             if(!$token) {
-                http_response_code(401);
+                http_response_code(204);
                 echo generate_response(false, 'NO_SESSION', 'Cookie de sessão não encontrado.');
                 exit;
             }
@@ -37,7 +37,7 @@
                         $del_session = $conn->prepare('DELETE FROM sessions WHERE token = :token');
                         $del_session->bindParam(':token', $token, PDO::PARAM_STR);
 
-                        http_response_code(401);
+                        http_response_code(404);
                         echo generate_response(false, 'SESSION_EXPIRED', 'Esta sessão já expirou, e foi removida do banco.');
                         exit;
                     } catch (PDOException $err) {
@@ -63,16 +63,13 @@
                 if($found_data) {
                     http_response_code(200);
                     echo generate_response(true, 'OK', 'Sessão encontrada e dados do usuário recebidos.', $found_data[0]);
-                    exit;
                 } else {
                     http_response_code(404);
                     echo generate_response(false, 'NOT_FOUND', 'Sessão encontrada, mas usuário não existe.');
-                    exit;
                 }
             } else {
                 http_response_code(404);
                 echo generate_response(true, 'NOT_FOUND', 'Dados da sessão não foram encontrados.');
-                exit;
             }
             break;
 
@@ -80,27 +77,16 @@
             // pegando o token e saindo se não tiver nada
             $token = $_COOKIE[SESSION_COOKIE_NAME] ?? null;
             if(!$token) {
-                http_response_code(404);
+                http_response_code(204);
                 echo generate_response(false, 'NOT_FOUND', 'Token não foi encontrado nos cookies.');
                 exit;
             }
 
             // rodo a query, expiro e respondo
-            try {
-                $delete_session = $conn->prepare('DELETE FROM sessions WHERE token = :token');
-                $delete_session->bindParam(':token', $token, PDO::PARAM_INT);
-                $delete_session->execute();
+            remove_session($conn, $token);
 
-                setcookie(SESSION_COOKIE_NAME, '', time() - 3600);
-
-                http_response_code(200);
-                echo generate_response(true, 'OK', 'Sessão encontrada e removida com sucesso.');
-                exit;
-            } catch(PDOException $err) {
-                http_response_code(500);
-                echo generate_response(false, 'PDO_ERROR', $err->getMessage());
-                exit;
-            }
+            http_response_code(200);
+            echo generate_response(true, 'OK', 'Sessão encontrada e removida com sucesso.');
             break;
     }
 
