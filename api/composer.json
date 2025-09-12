@@ -1,0 +1,8 @@
+{
+    "name": "artur-vidal/cakelicker",
+    "description": "Dependências do jogo Cakelicker",
+    "type": "project",
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    }
+}

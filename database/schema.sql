@@ -1,32 +1,36 @@
+CREATE DATABASE IF NOT EXISTS cakelicker_database;
+USE cakelicker_database;
+
 CREATE TABLE IF NOT EXISTS saves (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    name TINYTEXT NOT NULL,
+    name VARCHAR(255) NOT NULL,
     cakes TEXT NOT NULL,
     xp INT(11) NOT NULL,
     level INT(11) NOT NULL,
     prestige INT(11) NOT NULL,
     rebirths INT(11) NOT NULL,
-    savepath TINYTEXT NOT NULL,
-    dtcriacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    savepath VARCHAR(255) NOT NULL,
+    creationdate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS usuarios (
+CREATE TABLE IF NOT EXISTS users (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(20) UNIQUE NOT NULL,
-    email TINYTEXT UNIQUE NOT NULL,
-    password TINYTEXT NOT NULL,
-    nickname TINYTEXT NOT NULL,
-    idsave INT(11) NOT NULL,
-    dtnasc DATE NOT NULL,
-    dtcriacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    nickname VARCHAR(255) NOT NULL,
+    saveid INT(11) NOT NULL,
+    birthdate DATE NOT NULL,
+    creationdate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (idsave) REFERENCES saves(id)
+    FOREIGN KEY (saveid) REFERENCES saves(id)
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
-    token TINYTEXT NOT NULL,
-    idusuario INT(11) NOT NULL,
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(255) NOT NULL,
+    userid INT(11) NOT NULL,
     expiresat DATETIME NOT NULL,
 
-    FOREIGN KEY (idusuario) REFERENCES usuarios(id)
+    FOREIGN KEY (userid) REFERENCES users(id)
 );

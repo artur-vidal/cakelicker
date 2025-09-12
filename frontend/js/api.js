@@ -1,4 +1,4 @@
-const API_URL = "../backend/routes";
+const API_URL = "../api";
 
 async function apiGet(endpoint) {
     try {
@@ -74,24 +74,24 @@ async function apiDelete(endpoint, data) {
 export async function login(user, password) {
 
     // mandando pra rota de login e esperando resposta
-    return apiPost("/login.php", {
+    return apiPost("/login", {
         "user" : user, 
         "password" : password
     });
 }
 
 export async function logout() {
-    return apiDelete('/session.php');
+    return apiDelete('/session');
 }
 
 export async function getSession() {
-    return apiGet('/session.php')
+    return apiGet('/session')
 }
 
 export async function register(username, nickname, email, password, birthdate) {
 
     // pegando dados e mandando pro servidor registrar
-    return apiPost("/register.php", {
+    return apiPost("/register", {
         "username" : username,
         "nickname" : nickname,
         "email" : email,

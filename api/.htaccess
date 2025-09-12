@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# as três ou só a terceira
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d [OR]
+
+RewriteCond %{REQUEST_URI} \.(php|html|json)*$
+
+RewriteRule ^(.*)$ index.php [QSA,L]

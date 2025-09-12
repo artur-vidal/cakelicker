@@ -7,7 +7,7 @@ export function getForm(selector) {
 
 export function logResponse(responseJson) {
 
-    // simplesmente dou um log
+    // simplesmente dou um log bonito
     console.log(JSON.stringify(responseJson, null, 2));
 
 }
