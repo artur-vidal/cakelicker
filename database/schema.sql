@@ -3,12 +3,12 @@ USE cakelicker_database;
 
 CREATE TABLE IF NOT EXISTS saves (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    cakes TEXT NOT NULL,
-    xp INT(11) NOT NULL,
-    level INT(11) NOT NULL,
-    prestige INT(11) NOT NULL,
-    rebirths INT(11) NOT NULL,
+    name VARCHAR(255) NOT NULL DEFAULT "Desconhecido",
+    cakes TEXT NOT NULL DEFAULT 0,
+    xp INT(11) NOT NULL DEFAULT 0,
+    level INT(11) NOT NULL DEFAULT 1,
+    prestige INT(11) NOT NULL DEFAULT 0,
+    rebirths INT(11) NOT NULL DEFAULT 0,
     savepath VARCHAR(255) NOT NULL,
     creationdate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

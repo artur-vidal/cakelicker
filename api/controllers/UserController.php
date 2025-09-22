@@ -151,7 +151,17 @@
             if(!preg_match($email_expression, $email)) return generate_response(false, 401, 'E-mail precisa seguir formato padrão.', $email);
 
             // data de nascimento 
-            if(!preg_match($birthdate_expression, $birthdate)) return generate_response(false, 401, 'Data de nascimento tem que estar em formato YYYY-MM-DD.', $birthdate);
+            if(!preg_match($birthdate_expression, $birthdate)) {
+                return generate_response(false, 401, 'Data de nascimento tem que ser válida e estar em formato YYYY-MM-DD.', $birthdate);
+            } else {
+                
+                // data no futuro
+                if(strtotime($birthdate) > time()) return generate_response(false, 401, 'Data de nascimento futura.', $birthdate);
+
+                // data muito no passado
+                if(strtotime($birthdate) < strtotime('1900-01-01')) return generate_response(false, 401, 'Data de nascimento muito passada.', $birthdate);
+
+            }
 
             // depois que eu verifiquei o formato da data, preciso ver se ela não é futura
             if(strtotime($birthdate) > time()) return generate_response(false, 401, 'Data de nascimento futura.', $birthdate);
@@ -180,7 +190,7 @@
                 } while(file_exists(UPLOAD_DIR . $filename));
                 
                 // criando save e pegando ID dele
-                $save_stmt = $this->conn->prepare('INSERT INTO saves(name, cakes, xp, level, prestige, rebirths, savepath) VALUES("Desconhecido", "0", 0, 1, 0, 0, :savepath)');
+                $save_stmt = $this->conn->prepare('INSERT INTO saves(savepath) VALUES(:savepath)');
                 $save_stmt->execute(['savepath' => $filename]);
                 $save_id = $this->conn->lastInsertId();
 
