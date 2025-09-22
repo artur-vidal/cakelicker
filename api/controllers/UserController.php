@@ -6,6 +6,11 @@
         public function __construct($dbconn) {
             // conectando com o banco
             $this->conn = $dbconn;
+
+            // garantindo que a pasta de saves exista
+            if(!is_dir(UPLOAD_DIR)){
+                mkdir(UPLOAD_DIR);
+            }
         }
 
         public function getUserById($id) {
@@ -101,12 +106,12 @@
 
         public function getFirstUserId() {
             try {
-                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC');
+                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1');
                 $id_query->execute();
 
-                $val = $id_query->fetchAll(PDO::FETCH_ASSOC);
+                $val = $id_query->fetch(PDO::FETCH_COLUMN);
 
-                return ($val) ? $val[0]['id'] : null;
+                return ($val) ? $val : null;
 
             } catch(PDOException $err) {
                 return generate_response(false, 500, $err->getMessage(), $value);
@@ -131,7 +136,7 @@
 
             #region Validação
 
-            $username_expression = '/^[a-z0-9_]{3,20}$/'; // deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial
+            $username_expression = '/^[a-z0-9_]{4,20}$/'; // deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial
             $password_expression = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/'; // pelo menos 8 caracteres e com número
             $email_expression = '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'; // exemplo@email.com
             $birthdate_expression = '/^\d{4}-\d{2}-\d{2}$/'; // formato YYYY-MM-DD
@@ -153,45 +158,34 @@
 
             #endregion
 
-            // se passar pelas validações base, verifico se já existe usuário com esse user ou email🔥
-            try {
-                $same_user_query = $this->conn->prepare('SELECT username FROM users WHERE username = :username OR email = :email');
-                $same_user_query->execute(['username' => $username, 'email' => $email]);
-            } catch (PDOException $err){
-                return generate_response(false, 500, $err->getMessage());
-            }
-
-            $same_user = $same_user_query->fetch(PDO::FETCH_ASSOC);
-
-            if($same_user) {
-                return generate_response(false, 409, 'Já existe um usuário com esse @ ou e-mail registrado.');
-            }
-
-            // se ainda passar por essa, registro os datas no databank
-            // crio um arquivo e uma entrada no banco antes
-            if(!is_dir(UPLOAD_DIR)){
-                mkdir(UPLOAD_DIR);
-            }
-
+            #region TRANSAÇão !!!!
             try {
 
                 // iniciando transação
                 $this->conn->beginTransaction();
 
-                // gerando nome aleatório de arquivo
-                $filename = bin2hex(random_bytes(16)) . '_savefile.json';
+                // verifico se já existe usuário com esse user ou email🔥
+                $same_user_query = $this->conn->prepare('SELECT username FROM users WHERE username = :username OR email = :email');
+                $same_user_query->execute(['username' => $username, 'email' => $email]);
+                $same_user = $same_user_query->fetch(PDO::FETCH_ASSOC);
+
+                if($same_user) {
+                    $this->conn->rollBack();
+                    return generate_response(false, 409, 'Já existe um usuário com esse @ ou e-mail registrado.');
+                }
+
+                // gerando nome aleatório de arquivo sem duplicar pra garrantir
+                do {
+                    $filename = bin2hex(random_bytes(16)) . '_savefile.json';
+                } while(file_exists(UPLOAD_DIR . $filename));
                 
-                // salvando caminho
+                // criando save e pegando ID dele
                 $save_stmt = $this->conn->prepare('INSERT INTO saves(name, cakes, xp, level, prestige, rebirths, savepath) VALUES("Desconhecido", "0", 0, 1, 0, 0, :savepath)');
                 $save_stmt->execute(['savepath' => $filename]);
+                $save_id = $this->conn->lastInsertId();
 
                 // salvando arquivo
                 file_put_contents(UPLOAD_DIR . $filename, json_encode([]));
-
-                // busco id do save recém criado
-                $save_query = $this->conn->prepare('SELECT id FROM saves ORDER BY creationdate DESC LIMIT 1');
-                $save_query->execute();
-                $save_id = $save_query->fetchAll(PDO::FETCH_ASSOC)[0]['id'];
 
                 // crio, finalmente, um usuário usando esse id
                 $encrypted_password = password_hash($password, PASSWORD_BCRYPT);
@@ -210,16 +204,22 @@
             
                 $this->conn->commit();
 
-            } catch (Exception $err) {
+            } catch (PDOException $err) {
 
-                // fazendo rollback e retirando arquivo (caso exista)
-                $this->conn->rollBack();
+                // fazendo rollback (caso esteja em transação) 
+                if($this->conn->inTransaction()) {
+                    $this->conn->rollBack();
+                }
+
+                // retirando arquivo (caso exista)
                 if(isset($filename) and file_exists(UPLOAD_DIR . $filename)) {
                     unlink(UPLOAD_DIR . $filename);
                 }
 
                 return generate_response(false, 500, $err->getMessage());
             }
+
+            #endregion
 
             // voltando com uma resposta falano qui deu serto
             return generate_response(true, 201, 'Sucesso no registro!');

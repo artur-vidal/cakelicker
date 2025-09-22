@@ -4,10 +4,10 @@
     
     // rodando cleanup nos saves
     remove_useless_saves($conn);
-
+    
     // pegando dados da requisição
     $data = json_decode(file_get_contents('php://input'), true);
-    $method = $_SERVER['REQUEST_METHOD'];   
+    $method = $_SERVER['REQUEST_METHOD'];
 
     // pegando recurso e id da uri
     $uri_parts = parse_url($_SERVER['REQUEST_URI']);

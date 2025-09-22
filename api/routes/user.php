@@ -41,7 +41,7 @@
                         break;
                     }
                     
-                    if (ctype_digit($preset_id)) {
+                    if (is_int($preset_id)) {
                         $response = $u_controller->getUserById($preset_id);
                     } else {
                         $response = $u_controller->getUserByUsername($preset_id);
