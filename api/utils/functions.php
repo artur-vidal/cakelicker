@@ -56,21 +56,19 @@
             $save_query = $dbconn->prepare('SELECT savepath FROM saves');
             $save_query->execute();
 
-            $savelist = $save_query->fetchAll(PDO::FETCH_ASSOC);
+            $savelist = $save_query->fetchAll(PDO::FETCH_COLUMN);
+            
+            $dir_list = scandir(UPLOAD_DIR);
+            
+            for($i = 0; $i < count($dir_list); $i++) {
+                $cur_element = $dir_list[$i];
 
-            if($savelist) {
-                $dir_list = scandir(UPLOAD_DIR); 
-                
-                for($i = 0; $i < count($dir_list); $i++) {
-                    $cur_element = $dir_list[$i];
+                if(!is_file(UPLOAD_DIR . $cur_element) or $cur_element === '.' or $cur_element === '..') {
+                    continue;
+                }
 
-                    if(!is_file($cur_element)) {
-                        continue;
-                    }
-
-                    if(!in_array($cur_element, $savelist[0])) {
-                        unlink(UPLOAD_DIR . $cur_element);
-                    }
+                if(!in_array($cur_element, $savelist)) {
+                    unlink(UPLOAD_DIR . $cur_element);
                 }
             }
 

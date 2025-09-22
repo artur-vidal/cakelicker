@@ -31,23 +31,21 @@
 
                 } else {
 
-                    if($id == 'last') {
+                    $preset_id = $id;
 
-                        $last_id = $u_controller->getLastUserId();
-                        if($last_id == null) {
-                            $response = generate_response(false, 404, 'usuários não encontrados');
-                        } else {
+                    if($id == 'first') $preset_id = $u_controller->getFirstUserId();
+                    else if($id == 'last') $preset_id = $u_controller->getLastUserId();
 
-                            $response = $u_controller->getUserById($last_id);
-
-                        }
-
-                    } else {
-
-                        $response = $u_controller->getUserByUsername($id);
-
+                    if($preset_id == null) {
+                        $response = generate_response(false, 404, 'usuários não encontrados');
+                        break;
                     }
-
+                    
+                    if (ctype_digit($preset_id)) {
+                        $response = $u_controller->getUserById($preset_id);
+                    } else {
+                        $response = $u_controller->getUserByUsername($preset_id);
+                    }
                 }
 
             }

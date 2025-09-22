@@ -99,6 +99,20 @@
             }
         }
 
+        public function getFirstUserId() {
+            try {
+                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC');
+                $id_query->execute();
+
+                $val = $id_query->fetchAll(PDO::FETCH_ASSOC);
+
+                return ($val) ? $val[0]['id'] : null;
+
+            } catch(PDOException $err) {
+                return generate_response(false, 500, $err->getMessage(), $value);
+            }
+        }
+
         public function getLastUserId() {
             try {
                 $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id DESC');
@@ -204,7 +218,7 @@
                     unlink(UPLOAD_DIR . $filename);
                 }
 
-                return generate_response(false, 500, $err->getMessage(), $data);
+                return generate_response(false, 500, $err->getMessage());
             }
 
             // voltando com uma resposta falano qui deu serto
