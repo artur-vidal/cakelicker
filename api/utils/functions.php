@@ -68,11 +68,11 @@
                 }
 
                 if(!in_array($cur_element, $savelist)) {
-                    unlink(UPLOAD_DIR . $cur_element);
+                    @unlink(UPLOAD_DIR . $cur_element);
                 }
             }
 
-        } catch(PDOException $err) {
+        } catch(Exception $err) {
             // ignorando caso não dê certo
         }
 

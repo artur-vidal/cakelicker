@@ -5,7 +5,10 @@
     define("IS_LOCAL", $_SERVER['REMOTE_ADDR'] == '127.0.0.1' || $_SERVER['REMOTE_ADDR'] == '::1');
     define("UPLOAD_DIR", './uploads/');
 
-    // importando arquivos essenciais
+    // header para padronizar tipo das respostas e garantir interpretação externa
+    header('Content-Type: application/json; charset=utf-8');
+
+    // --- IMPORTANDO ARQUIVOS ESSENCIAIS ---
 
     // ambiente
     require_once './vendor/autoload.php';

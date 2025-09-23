@@ -163,9 +163,6 @@
 
             }
 
-            // depois que eu verifiquei o formato da data, preciso ver se ela não é futura
-            if(strtotime($birthdate) > time()) return generate_response(false, 401, 'Data de nascimento futura.', $birthdate);
-
             #endregion
 
             #region TRANSAÇão !!!!
@@ -196,7 +193,7 @@
 
                 // salvando arquivo
                 file_put_contents(UPLOAD_DIR . $filename, json_encode([]));
-
+                
                 // crio, finalmente, um usuário usando esse id
                 $encrypted_password = password_hash($password, PASSWORD_BCRYPT);
 
@@ -214,19 +211,18 @@
             
                 $this->conn->commit();
 
-            } catch (PDOException $err) {
+            } catch (Exception $err) {
 
                 // fazendo rollback (caso esteja em transação) 
-                if($this->conn->inTransaction()) {
-                    $this->conn->rollBack();
-                }
+                $this->conn->rollBack();
 
                 // retirando arquivo (caso exista)
-                if(isset($filename) and file_exists(UPLOAD_DIR . $filename)) {
-                    unlink(UPLOAD_DIR . $filename);
+                if(isset($filename) && is_file(UPLOAD_DIR . $filename)) {
+                    @unlink(UPLOAD_DIR . $filename); // @ pra não dar warning
                 }
 
                 return generate_response(false, 500, $err->getMessage());
+
             }
 
             #endregion

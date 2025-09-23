@@ -2,9 +2,6 @@
 
     require_once './init.php';
     
-    // rodando cleanup nos saves
-    remove_useless_saves($conn);
-    
     // pegando dados da requisição
     $data = json_decode(file_get_contents('php://input'), true);
     $method = $_SERVER['REQUEST_METHOD'];
