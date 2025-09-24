@@ -15,7 +15,7 @@
         $conn->exec($query_content);
 
     } catch (PDOException $err) {
-        echo generate_response(false, 500, $err->getMessage());
+        echo json_encode(generate_response(false, 500, $err->getMessage()));
         exit;
     }
 
