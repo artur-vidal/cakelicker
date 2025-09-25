@@ -1,6 +1,6 @@
 <?php
 
-    require_once './init.php';
+    require_once __DIR__ . '/../init.php';
 
     remove_useless_saves($conn);
 

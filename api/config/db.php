@@ -11,7 +11,7 @@
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // criando tabelas caso precise
-        $query_content = file_get_contents('../database/schema.sql');
+        $query_content = file_get_contents(__DIR__ .'\\..\\database\\schema.sql');
         $conn->exec($query_content);
 
     } catch (PDOException $err) {

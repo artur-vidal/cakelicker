@@ -4,7 +4,8 @@ USE cakelicker_database;
 CREATE TABLE IF NOT EXISTS saves (
     id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL DEFAULT "Desconhecido",
-    cakes TEXT NOT NULL DEFAULT 0,
+    cakes_coefficient INT(11) NOT NULL DEFAULT 0,
+    cakes_exponent INT(11) NOT NULL DEFAULT 0,
     xp INT(11) NOT NULL DEFAULT 0,
     level INT(11) NOT NULL DEFAULT 1,
     prestige INT(11) NOT NULL DEFAULT 0,

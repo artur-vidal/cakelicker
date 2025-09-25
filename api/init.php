@@ -4,7 +4,7 @@
     define("SESSION_COOKIE_NAME", 'cakelicker_session');
 
     define("IS_LOCAL", (isset($_SERVER['REMOTE_ADDR'])) ? ($_SERVER['REMOTE_ADDR'] == '127.0.0.1' || $_SERVER['REMOTE_ADDR'] == '::1') : true);
-    define("UPLOAD_DIR", './uploads/');
+    define("UPLOAD_DIR", __DIR__ . '\\uploads\\');
 
     // header para padronizar tipo das respostas e garantir interpretação externa
     header('Content-Type: application/json; charset=utf-8');
@@ -12,7 +12,7 @@
     // --- IMPORTANDO ARQUIVOS ESSENCIAIS ---
 
     // ambiente
-    require_once './vendor/autoload.php';
+    require_once __DIR__ . '\\vendor\\autoload.php';
     use Dotenv\Dotenv;
     $dotenv = Dotenv::createImmutable(__DIR__);
     $dotenv->load();

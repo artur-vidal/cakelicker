@@ -13,6 +13,70 @@
             }
         }
 
+        private function validateUsername($username) {
+            // deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial
+            return preg_match('/^[a-z0-9_]{4,20}$/', $username);
+        }
+
+        private function validatePassword($password) {
+            // pelo menos 8 caracteres e com número
+            return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password);
+        }
+
+        private function validateEmail($email) {
+            // exemplo@email.com
+            return filter_var($email, FILTER_VALIDATE_EMAIL);
+        }
+
+        private function validateBirthdate($birthdate) {
+            // formato YYYY-MM-DD, se não passar direto eu já retorno
+            if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate)) {
+                return false;
+            }
+
+            // se a data não existir, como 30/02, também retorno
+            $date_parts = array_filter(explode('-', $birthdate)); // separando partes da data
+            if(!checkdate((int) $date_parts[1], (int) $date_parts[2], (int) $date_parts[0])) {
+                return false;
+            }
+
+            $birthtime = strtotime($birthdate);
+            $future = $birthtime > time();
+            $past = $birthtime < strtotime('1900-01-01');
+
+            return !$future && !$past;
+        }
+
+        public function getFirstUserId() {
+            try {
+                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1');
+                $id_query->execute();
+
+                $val = $id_query->fetch(PDO::FETCH_COLUMN);
+
+                return ($val) ? $val : null;
+
+            } catch(PDOException $err) {
+                echo json_encode(generate_response(false, 500, $err->getMessage()));
+                exit;
+            }
+        }
+
+        public function getLastUserId() {
+            try {
+                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id DESC LIMIT 1');
+                $id_query->execute();
+
+                $val = $id_query->fetchAll(PDO::FETCH_COLUMN);
+
+                return ($val) ? $val : null;
+
+            } catch(PDOException $err) {
+                echo json_encode(generate_response(false, 500, $err->getMessage()));
+                exit;
+            }
+        }
+
         public function getUserById($id) {
 
             try {
@@ -28,7 +92,7 @@
                 }
 
             } catch(PDOException $err) {
-                return generate_response(false, 500, $err->getMessage(), $value);
+                return generate_response(false, 500, $err->getMessage(), $id);
             }
         }
 
@@ -54,7 +118,7 @@
         public function getUserBySession($session_token) {
 
             try {
-                $stmt = $this->conn->prepare('SELECT users.* FROM sessions JOIN sessions users ON sessions.userid = users.id WHERE sessions.token = :token');
+                $stmt = $this->conn->prepare('SELECT users.* FROM sessions JOIN users ON sessions.userid = users.id WHERE sessions.token = :token');
                 $stmt->execute(['token' => $session_token]);
 
                 $user_found = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -72,13 +136,14 @@
 
         public function getUsers($page, $offset, $per_page, $order_param, $order_direction) {
 
-            if($page < 1) {
-                return generate_response(false, 400, 'getUsers() não aceita páginas abaixo de 1');
-            }
-
             // restringindo parâmetros permitidos por segurança
             $column_whitelist = ['id', 'username', 'email', 'nickname', 'birthdate', 'creationdate'];
             $order_direction_whitelist = ['ASC', 'DESC'];
+
+            // garantindo que os parametro estejam em limites razoáveis
+            $page = max(1, (int)$page);
+            $offset = max(0, (int)$offset);
+            $per_page = min(max(1, (int)$per_page), 150);
 
             if(!in_array($order_param, $column_whitelist)) $order_param = 'id';
             if(!in_array(strtoupper($order_direction), $order_direction_whitelist)) $order_direction = 'ASC';
@@ -104,63 +169,24 @@
             }
         }
 
-        public function getFirstUserId() {
-            try {
-                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1');
-                $id_query->execute();
-
-                $val = $id_query->fetch(PDO::FETCH_COLUMN);
-
-                return ($val) ? $val : null;
-
-            } catch(PDOException $err) {
-                return generate_response(false, 500, $err->getMessage(), $value);
-            }
-        }
-
-        public function getLastUserId() {
-            try {
-                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id DESC');
-                $id_query->execute();
-
-                $val = $id_query->fetchAll(PDO::FETCH_ASSOC);
-
-                return ($val) ? $val[0]['id'] : null;
-
-            } catch(PDOException $err) {
-                return generate_response(false, 500, $err->getMessage(), $value);
-            }
-        }
-
         public function createUser($username, $nickname, $email, $password, $birthdate) { 
 
             #region Validação
 
-            $username_expression = '/^[a-z0-9_]{4,20}$/'; // deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial
-            $password_expression = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/'; // pelo menos 8 caracteres e com número
-            $email_expression = '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'; // exemplo@email.com
-            $birthdate_expression = '/^\d{4}-\d{2}-\d{2}$/'; // formato YYYY-MM-DD
+            if(!$this->validateUsername($username)) {
+                return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', $username);
+            }
 
-            // user
-            if(!preg_match($username_expression, $username)) return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', $username);
- 
-            // senha
-            if(!preg_match($password_expression, $password)) return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', $password);
+            if(!$this->validatePassword($password)) {
+                return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', $password);
+            }
 
-            // email
-            if(!preg_match($email_expression, $email)) return generate_response(false, 401, 'E-mail precisa seguir formato padrão.', $email);
+            if(!$this->validateEmail($email)) {
+                return generate_response(false, 401, 'E-mail precisa seguir formato padrão exemplo@gmail.com', $email);
+            }
 
-            // data de nascimento 
-            if(!preg_match($birthdate_expression, $birthdate)) {
-                return generate_response(false, 401, 'Data de nascimento tem que ser válida e estar em formato YYYY-MM-DD.', $birthdate);
-            } else {
-                
-                // data no futuro
-                if(strtotime($birthdate) > time()) return generate_response(false, 401, 'Data de nascimento futura.', $birthdate);
-
-                // data muito no passado
-                if(strtotime($birthdate) < strtotime('1900-01-01')) return generate_response(false, 401, 'Data de nascimento muito passada.', $birthdate);
-
+            if(!$this->validateBirthdate($birthdate)) {
+                return generate_response(false, 401, 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.', $birthdate);
             }
 
             #endregion
