@@ -47,6 +47,13 @@
             return !$future && !$past;
         }
 
+        private function searchDuplicateUser($username, $email) {
+            $same_user_query = $this->conn->prepare('SELECT 1 FROM users WHERE username = :username OR email = :email LIMIT 1');
+            $same_user_query->execute(['username' => $username, 'email' => $email]);
+
+            return $same_user_query->fetch(PDO::FETCH_COLUMN) != 0;
+        }
+
         public function getFirstUserId() {
             try {
                 $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1');
@@ -80,13 +87,13 @@
         public function getUserById($id) {
 
             try {
-                $stmt = $this->conn->prepare('SELECT * FROM users WHERE id = :id');
+                $stmt = $this->conn->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
                 $stmt->execute(['id' => $id]);
 
-                $user_found = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $user_found = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if($user_found){
-                    return generate_response(true, 200, 'usuário encontrado', $user_found[0]);
+                    return generate_response(true, 200, 'usuário encontrado', $user_found);
                 } else {
                     return generate_response(false, 404, 'não existe usuário com esse id', $id);
                 }
@@ -198,11 +205,8 @@
                 $this->conn->beginTransaction();
 
                 // verifico se já existe usuário com esse user ou email🔥
-                $same_user_query = $this->conn->prepare('SELECT username FROM users WHERE username = :username OR email = :email');
-                $same_user_query->execute(['username' => $username, 'email' => $email]);
-                $same_user = $same_user_query->fetch(PDO::FETCH_ASSOC);
 
-                if($same_user) {
+                if($this->searchDuplicateUser($username, $email)) {
                     $this->conn->rollBack();
                     return generate_response(false, 409, 'Já existe um usuário com esse @ ou e-mail registrado.');
                 }
@@ -257,11 +261,137 @@
             return generate_response(true, 201, 'Sucesso no registro!');
         }
 
-        public function deleteUser() {
+        public function updateUserPartial($identifier, $info_array) {
 
+            // validando identificador - se não for nem id nem user valido, eu retorno direto
+            if(!ctype_digit($identifier) && !$this->validateUsername($identifier)) {
+                return generate_response(false, 400, 'Identificador inválido', $identifier);
+            }
+
+            // validando cada campo fornecido e guardando no array a cada sucesso
+            $to_be_altered = [];
+            
+            // username
+            if(isset($info_array['username'])) {
+
+                if($this->searchDuplicateUser($info_array['username'], null)) {
+                    return generate_response(false, 409, 'Já existe um usuário com esse @', $info_array['username']);
+                }
+                    
+                if(!$this->validateUsername($info_array['username'])) {
+                    return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', $info_array['username']);
+                }
+
+                $to_be_altered['username'] = $info_array['username'];
+
+            }
+
+            // nickname (não precisa de validação)
+            if(isset($info_array['nickname'])) {
+
+                $to_be_altered['nickname'] = $info_array['nickname'];
+
+            }
+
+            // email
+            if(isset($info_array['email'])) {
+
+                if($this->searchDuplicateUser(null, $info_array['email'])) {
+                    return generate_response(false, 409, 'Já existe um usuário com esse email', $info_array['email']);
+                }
+                    
+                if(!$this->validateEmail($info_array['email'])) {
+                    return generate_response(false, 401, 'E-mail precisa seguir formato padrão exemplo@gmail.com', $info_array['email']);
+                }
+
+                $to_be_altered['email'] = $info_array['email'];
+
+            }
+
+            // senha
+            if(isset($info_array['password'])) {
+
+                if(!$this->validatePassword($info_array['password'])) {
+                    return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', $info_array['password']);
+                }
+
+                $to_be_altered['password'] = password_hash($info_array['password'], PASSWORD_BCRYPT);
+
+            }
+
+            // data de nascimento
+            if(isset($info_array['birthdate'])) {
+
+                if(!$this->validateBirthdate($info_array['birthdate'])) {
+                    return generate_response(false, 409, 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.', $info_array['birthdate']);
+                }
+
+                $to_be_altered['birthdate'] = $info_array['birthdate'];
+
+            }
+
+            // tentando achar o usuário
+            try {
+                $user_query = $this->conn->prepare('SELECT id, username, nickname, email, password, birthdate FROM users WHERE id = :identifier OR username = :identifier');
+                $user_query->execute(['identifier' => $identifier]);
+
+                $user_found = $user_query->fetch(PDO::FETCH_ASSOC);
+                
+                if(!$user_found) {
+                    return generate_response(false, 404, 'Não existe usuário com esse user ou e-mail', $identifier);
+                }
+
+            } catch(PDOException $err) {
+                return generate_response(false, 500, $err->getMessage());
+            }
+
+            // depois de achar o usuário, eu valido as novas infos criando um novo usuário e substituindo com os novos dados
+            $new_user_info = $user_found;
+
+            // se não tiver o que alterar, já retorno de uma vez
+            if(empty($to_be_altered)) {
+                return generate_response(true, 200, 'Nenhuma informação utilizável fornecida para alteração', $info_array);
+            }
+
+            // criando código e parametros para a query update
+            $query_fields = [];
+            $query_params = ['id' => $user_found['id']];
+
+            foreach($to_be_altered as $field => $value) {
+                $query_fields[] = "$field = :$field";
+                $query_params[$field] = $value;
+                $new_user_info[$field] = $value;
+            }
+
+
+            // rodando query final!!!!!!
+            try {
+                
+                $this->conn->beginTransaction();
+
+                // juntando os fields pra colocar na query
+                $update_set = implode(', ', $query_fields);
+
+                $update_stmt = $this->conn->prepare("UPDATE users SET $update_set WHERE id = :id");
+                $update_stmt->execute($query_params);
+
+                $this->conn->commit();
+
+                // tirando a senha hasheada da resposta porque é L e os hackers vão pocar 🔥🔥
+                unset($new_user_info['password']);
+
+                return generate_response(true, 200, 'Usuário atualizado com sucesso', $new_user_info);
+
+
+            } catch(PDOException $err) {
+
+                $this->conn->rollBack();
+                return generate_response(false, 500, $err->getMessage());
+
+            }
         }
 
-        public function updateUser() {
+        public function deleteUser() {
 
         }
     }

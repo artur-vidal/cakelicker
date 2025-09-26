@@ -49,6 +49,13 @@
                 }
 
             }
+
+            // filtrando com o parâmetro 'fields'
+            if(isset($_GET['fields'])) {
+                $fields = array_filter(explode(',', $_GET['fields']));
+                $response['data'] = filter_response_data($fields, $response['data']);
+            }
+
             break;
         
         case 'POST':
@@ -66,16 +73,13 @@
 
             break;
 
-        
+        case 'PATCH':
+
+            $response = $u_controller->updateUserPartial($id, $data);
+            break;
     }
 
-    // filtrando com o parâmetro 'fields'
-    if(isset($_GET['fields'])) {
-        $fields = array_filter(explode(',', $_GET['fields']));
-        $response['data'] = filter_response_data($fields, $response['data']);
-    }
-
-    // enviando de volta
+    // enviando resposta
     echo json_encode($response);
 
 ?>
