@@ -52,6 +52,7 @@
     function remove_useless_saves($dbconn) {
 
         // reunindo saves inutilizados
+        $total_removed = 0;
         try {
             $save_query = $dbconn->prepare('SELECT savepath FROM saves');
             $save_query->execute();
@@ -68,7 +69,8 @@
                 }
 
                 if(!in_array($cur_element, $savelist)) {
-                    @unlink(UPLOAD_DIR . $cur_element);
+                    unlink(UPLOAD_DIR . $cur_element);
+                    $total_removed++;
                 }
             }
 
@@ -76,6 +78,7 @@
             // ignorando caso não dê certo
         }
 
+        return $total_removed;
     }
 
     function filter_response_data($field_array, $response_data) {

@@ -1,9 +1,10 @@
 <?php
 
-    require_once './controllers/UserController.php';
+    require_once __DIR__ . '\\..\\controllers\\UserController.php';
 
     $u_controller = new UserController($conn);
     $response = null; // resposta da API, echo no fim do arquivo
+    $identifier_presets = ['first', 'last'];
 
     switch($method) {
         case 'GET':
@@ -21,31 +22,31 @@
 
             } else {
 
-                if($id < 1) {
-                    $response = generate_response(false, 400, 'id inválido');
-                }
+                // não é preset e é numerico
+                if(!in_array($id, $identifier_presets)) {
 
-                if(ctype_digit($id)) { 
-
-                   $response = $u_controller->getUserById($id);
+                   $response = $u_controller->getUser($id);
 
                 } else {
 
-                    $preset_id = $id;
+                    $new_id = $id;
 
-                    if($id == 'first') $preset_id = $u_controller->getFirstUserId();
-                    else if($id == 'last') $preset_id = $u_controller->getLastUserId();
+                    switch($id) {
+                        case 'first':
+                            $new_id = $u_controller->getFirstUserId();
+                            break;
 
-                    if($preset_id == null) {
-                        $response = generate_response(false, 404, 'usuários não encontrados');
+                        case 'last':
+                            $new_id = $u_controller->getLastUserId();
+                            break;
+                    }
+
+                    if($new_id == null) {
+                        $response = generate_response(false, 404, 'usuário não encontrados');
                         break;
                     }
                     
-                    if (is_int($preset_id)) {
-                        $response = $u_controller->getUserById($preset_id);
-                    } else {
-                        $response = $u_controller->getUserByUsername($preset_id);
-                    }
+                    $response = $u_controller->getUser($new_id);
                 }
 
             }
@@ -60,16 +61,7 @@
         
         case 'POST':
 
-            $columns = ['username', 'nickname', 'email', 'password', 'birthdate'];
-            if(array_has_keys($columns, $data)){
-
-                $response = $u_controller->createUser($data['username'], $data['nickname'], $data['email'], $data['password'], $data['birthdate']);
-
-            } else {
-
-                $response = generate_response(false, 400, 'dados insuficientes para registro');
-
-            }
+            $response = $u_controller->createUser($data);
 
             break;
 

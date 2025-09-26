@@ -1,5 +1,7 @@
 <?php
 
+    require_once __DIR__ . '\\..\\init.php';
+
     class UserController {
         private $conn;
 
@@ -47,6 +49,14 @@
             return !$future && !$past;
         }
 
+        private function validateId($id) {
+            return (ctype_digit($id) || is_int($id)) && $id > 0;
+        }
+
+        private function validateIdentifier($identifier) {
+            return $this->validateId($identifier) || $this->validateUsername($identifier);
+        }
+
         private function searchDuplicateUser($username, $email) {
             $same_user_query = $this->conn->prepare('SELECT 1 FROM users WHERE username = :username OR email = :email LIMIT 1');
             $same_user_query->execute(['username' => $username, 'email' => $email]);
@@ -84,41 +94,22 @@
             }
         }
 
-        public function getUserById($id) {
+        public function getUser($identifier) {
 
             try {
-                $stmt = $this->conn->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
-                $stmt->execute(['id' => $id]);
+                $stmt = $this->conn->prepare('SELECT * FROM users WHERE id = :identifier OR username = :identifier');
+                $stmt->execute(['identifier' => $identifier]);
 
                 $user_found = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if($user_found){
                     return generate_response(true, 200, 'usuário encontrado', $user_found);
                 } else {
-                    return generate_response(false, 404, 'não existe usuário com esse id', $id);
+                    return generate_response(false, 404, 'não existe usuário com esse identificador', $identifier);
                 }
 
             } catch(PDOException $err) {
-                return generate_response(false, 500, $err->getMessage(), $id);
-            }
-        }
-
-        public function getUserByUsername($username) {
-
-            try {
-                $stmt = $this->conn->prepare('SELECT * FROM users WHERE username = :username');
-                $stmt->execute(['username' => $username]);
-
-                $user_found = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                if($user_found){
-                    return generate_response(true, 200, 'usuário encontrado', $user_found[0]);
-                } else {
-                    return generate_response(false, 404, 'não existe usuário com esse username', $username);
-                }
-
-            } catch(PDOException $err) {
-                return generate_response(false, 500, $err->getMessage(), $username);
+                return generate_response(false, 500, $err->getMessage(), $identifier);
             }
         }
 
@@ -176,29 +167,31 @@
             }
         }
 
-        public function createUser($username, $nickname, $email, $password, $birthdate) { 
+        public function createUser($user_info_array) { 
 
-            #region Validação
-
-            if(!$this->validateUsername($username)) {
-                return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', $username);
+            // verificando se veio tudo junto primeiro
+            if(!array_has_keys(['username', 'nickname', 'email', 'password', 'birthdate'], $user_info_array)) {
+                return generate_response(false, 400, 'Dados insuficientes para criar usuário', $user_info_array);
             }
 
-            if(!$this->validatePassword($password)) {
-                return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', $password);
+            // validando o resto das coisas
+            if(!$this->validateUsername($user_info_array['username'])) {
+                return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', $user_info_array['username']);
             }
 
-            if(!$this->validateEmail($email)) {
-                return generate_response(false, 401, 'E-mail precisa seguir formato padrão exemplo@gmail.com', $email);
+            if(!$this->validatePassword($user_info_array['password'])) {
+                return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', $user_info_array['password']);
             }
 
-            if(!$this->validateBirthdate($birthdate)) {
-                return generate_response(false, 401, 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.', $birthdate);
+            if(!$this->validateEmail($user_info_array['email'])) {
+                return generate_response(false, 401, 'E-mail precisa seguir formato padrão exemplo@gmail.com', $user_info_array['email']);
             }
 
-            #endregion
+            if(!$this->validateBirthdate($user_info_array['birthdate'])) {
+                return generate_response(false, 401, 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.', $user_info_array['birthdate']);
+            }
 
-            #region TRANSAÇão !!!!
+            // TRANSAÇÃO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             try {
 
                 // iniciando transação
@@ -206,9 +199,9 @@
 
                 // verifico se já existe usuário com esse user ou email🔥
 
-                if($this->searchDuplicateUser($username, $email)) {
+                if($this->searchDuplicateUser($user_info_array['username'], $user_info_array['email'])) {
                     $this->conn->rollBack();
-                    return generate_response(false, 409, 'Já existe um usuário com esse @ ou e-mail registrado.');
+                    return generate_response(false, 409, 'Já existe um usuário com esse @ ou e-mail registrado.', ['username' => $user_info_array['username'], 'email' => $user_info_array['email']]);
                 }
 
                 // gerando nome aleatório de arquivo sem duplicar pra garrantir
@@ -225,21 +218,25 @@
                 file_put_contents(UPLOAD_DIR . $filename, json_encode([]));
                 
                 // crio, finalmente, um usuário usando esse id
-                $encrypted_password = password_hash($password, PASSWORD_BCRYPT);
+                $encrypted_password = password_hash($user_info_array['password'], PASSWORD_BCRYPT);
 
                 $user_stmt = $this->conn->prepare('INSERT INTO users(username, email, password, nickname, saveid, birthdate) VALUES(:username, :email, :password, :nickname, :saveid, :birthdate)');
 
                 // executando registramento épico !!!!1!1! !! !  1!1!
-                $user_stmt->execute([
-                    'username' => $username, 
-                    'email' => $email, 
+                $new_user_info = [
+                    'username' => $user_info_array['username'], 
+                    'email' => $user_info_array['email'], 
                     'password' => $encrypted_password, 
-                    'nickname' => $nickname, 
+                    'nickname' => $user_info_array['nickname'], 
                     'saveid' => $save_id, 
-                    'birthdate' => $birthdate
-                ]);
+                    'birthdate' => $user_info_array['birthdate']
+                ];
+                $user_stmt->execute($new_user_info);
             
                 $this->conn->commit();
+
+                // voltando com uma resposta falano que deu certo
+                return generate_response(true, 201, 'Sucesso no registro!', $new_user_info);
 
             } catch (Exception $err) {
 
@@ -255,16 +252,12 @@
 
             }
 
-            #endregion
-
-            // voltando com uma resposta falano qui deu serto
-            return generate_response(true, 201, 'Sucesso no registro!');
         }
 
         public function updateUserPartial($identifier, $info_array) {
 
             // validando identificador - se não for nem id nem user valido, eu retorno direto
-            if(!ctype_digit($identifier) && !$this->validateUsername($identifier)) {
+            if(!$this->validateIdentifier($identifier)) {
                 return generate_response(false, 400, 'Identificador inválido', $identifier);
             }
 
