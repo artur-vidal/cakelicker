@@ -6,6 +6,24 @@
     $response = null; // resposta da API, echo no fim do arquivo
     $identifier_presets = ['first', 'last'];
 
+    // convertendo preset caso encontre
+    if(in_array($id, $identifier_presets)) {
+        $new_id = $id;
+
+        switch($id) {
+            case 'first':
+                $new_id = $u_controller->getFirstUserId();
+                break;
+
+            case 'last':
+                $new_id = $u_controller->getLastUserId();
+                break;
+        }
+
+        $id = $new_id;
+    }
+
+
     switch($method) {
         case 'GET':
 
@@ -22,32 +40,7 @@
 
             } else {
 
-                // não é preset e é numerico
-                if(!in_array($id, $identifier_presets)) {
-
-                   $response = $u_controller->getUser($id);
-
-                } else {
-
-                    $new_id = $id;
-
-                    switch($id) {
-                        case 'first':
-                            $new_id = $u_controller->getFirstUserId();
-                            break;
-
-                        case 'last':
-                            $new_id = $u_controller->getLastUserId();
-                            break;
-                    }
-
-                    if($new_id == null) {
-                        $response = generate_response(false, 404, 'usuário não encontrados');
-                        break;
-                    }
-                    
-                    $response = $u_controller->getUser($new_id);
-                }
+                $response = $u_controller->getUser($id);
 
             }
 

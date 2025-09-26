@@ -84,7 +84,7 @@
                 $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id DESC LIMIT 1');
                 $id_query->execute();
 
-                $val = $id_query->fetchAll(PDO::FETCH_COLUMN);
+                $val = $id_query->fetch(PDO::FETCH_COLUMN);
 
                 return ($val) ? $val : null;
 
