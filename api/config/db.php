@@ -15,7 +15,7 @@
         $conn->exec($query_content);
 
     } catch (PDOException $err) {
-        echo json_encode(generate_response(false, 500, $err->getMessage()));
+        echo json_encode(generate_response(false, 500, 'Ocorreu um erro na conexão com o banco de dados.', $err->getMessage()));
         exit;
     }
 

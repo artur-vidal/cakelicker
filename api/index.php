@@ -19,10 +19,10 @@
     // mandando pras rotas
     switch($primary_resource) {
         case 'users':
-            include 'routes/user.php';
+            include __DIR__ . '\\routes\\user.php';
             break;
         default:
-            echo json_encode(generate_response(true, 200, 'sem rota'));
+            echo json_encode(generate_response(true, 200, 'Rota inválida.', 'Essa rota não consta no switch'));
             break;
     }
 ?>

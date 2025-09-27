@@ -58,9 +58,14 @@
 
             break;
 
-        case 'PATCH':
+        case 'PUT':
 
-            $response = $u_controller->updateUserPartial($id, $data);
+            $response = $u_controller->updateUser($id, $data);
+            break;
+        
+        case 'DELETE':
+
+            $response = $u_controller->deleteUser($id);
             break;
     }
 
