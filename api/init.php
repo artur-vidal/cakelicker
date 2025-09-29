@@ -1,10 +1,11 @@
 <?php
 
     // definição de constantes
-    define("SESSION_COOKIE_NAME", 'cakelicker_session');
-
-    define("IS_LOCAL", (isset($_SERVER['REMOTE_ADDR'])) ? ($_SERVER['REMOTE_ADDR'] == '127.0.0.1' || $_SERVER['REMOTE_ADDR'] == '::1') : true);
-    define("UPLOAD_DIR", __DIR__ . '\\uploads\\');
+    define('IS_LOCAL', (isset($_SERVER['REMOTE_ADDR'])) ? ($_SERVER['REMOTE_ADDR'] == '127.0.0.1' || $_SERVER['REMOTE_ADDR'] == '::1') : true);
+    define('SESSION_COOKIE_NAME', 'cakelicker_session');
+    define('UPLOAD_DIR', __DIR__ . '\\uploads\\');
+    define('USER_ENDPOINT_PRESETS', ['first', 'last']);
+    define('SAVES_PER_USER', 3);
 
     // header para padronizar tipo das respostas e garantir interpretação externa
     header('Content-Type: application/json; charset=utf-8');

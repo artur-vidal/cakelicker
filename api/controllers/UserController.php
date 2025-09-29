@@ -1,12 +1,16 @@
 <?php
 
-    require_once __DIR__ . '\\..\\init.php';
+    require_once __DIR__ . '\\traits\\ValidationTraits.php';
 
     class UserController {
+
+        use ValidationTraits;
+        
         private $conn;
 
         public function __construct($dbconn) {
-            // conectando com o banco
+
+            // definindo variáveis
             $this->conn = $dbconn;
 
             // garantindo que a pasta de saves exista
@@ -15,53 +19,30 @@
             }
         }
 
-        private function validateUsername($username) {
-            // deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial
-            return preg_match('/^[a-z0-9_]{4,20}$/', $username);
-        }
-
-        private function validatePassword($password) {
-            // pelo menos 8 caracteres e com número
-            return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password);
-        }
-
-        private function validateEmail($email) {
-            // exemplo@email.com
-            return filter_var($email, FILTER_VALIDATE_EMAIL);
-        }
-
-        private function validateBirthdate($birthdate) {
-            // formato YYYY-MM-DD, se não passar direto eu já retorno
-            if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate)) {
-                return false;
-            }
-
-            // se a data não existir, como 30/02, também retorno
-            $date_parts = array_filter(explode('-', $birthdate)); // separando partes da data
-            if(!checkdate((int) $date_parts[1], (int) $date_parts[2], (int) $date_parts[0])) {
-                return false;
-            }
-
-            $birthtime = strtotime($birthdate);
-            $future = $birthtime > time();
-            $past = $birthtime < strtotime('1900-01-01');
-
-            return !$future && !$past;
-        }
-
-        private function validateId($id) {
-            return (ctype_digit($id) || is_int($id)) && $id > 0;
-        }
-
-        private function validateIdentifier($identifier) {
-            return $this->validateId($identifier) || $this->validateUsername($identifier);
-        }
-
         private function searchDuplicateUser($username, $email) {
             $same_user_query = $this->conn->prepare('SELECT 1 FROM users WHERE username = :username OR email = :email LIMIT 1');
             $same_user_query->execute(['username' => $username, 'email' => $email]);
 
             return $same_user_query->fetch(PDO::FETCH_COLUMN) != 0;
+        }
+
+        private function findPresetId($preset) {
+
+            switch($preset) {
+                case 'first':
+                    $new_id = $this->getFirstUserId();
+                    break;
+
+                case 'last':
+                    $new_id = $this->getLastUserId();
+                    break;
+                default:
+                    $new_id = $preset;
+                    break;
+            }
+
+            return $new_id;
+
         }
 
         public function getFirstUserId() {
@@ -74,8 +55,7 @@
                 return ($val) ? $val : null;
 
             } catch(PDOException $err) {
-                echo json_encode(generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage()));
-                exit;
+                respond(generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage()));
             }
         }
 
@@ -89,8 +69,7 @@
                 return ($val) ? $val : null;
 
             } catch(PDOException $err) {
-                echo json_encode(generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage()));
-                exit;
+                respond(generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage()));
             }
         }
 
@@ -99,6 +78,8 @@
             try {
 
                 $query_first_part = 'SELECT id, username, nickname, email, birthdate, creationdate FROM users WHERE ';
+                $identifier = $this->findPresetId($identifier);
+
                 if ($this->validateId($identifier)) {
                     $stmt = $this->conn->prepare($query_first_part . 'id = :id');
                     $stmt->execute(['id' => (int)$identifier]);
@@ -118,12 +99,6 @@
             } catch(PDOException $err) {
                 return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage(), $identifier);
             }
-        }
-
-        public function getUserBySession($session_token) {
-
-            // a desenvolver
-
         }
 
         public function getUsers($page, $offset, $per_page, $order_param, $order_direction) {
@@ -151,9 +126,9 @@
                 $users_found = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 if($users_found){
-                    return generate_response(true, 200, 'Usuários encontrados.', $users_found);
+                    return generate_response(true, 200, 'Usuários encontrados.',null , $users_found);
                 } else {
-                    return generate_response(false, 404, 'Usuários não foram encontrados.', var_dump($users_found));
+                    return generate_response(false, 404, 'Usuários não foram encontrados.', null);
                 }
 
             } catch(PDOException $err) {
@@ -402,7 +377,7 @@
                 }
 
                 if($delete_stmt->rowCount() == 0) {
-                    return generate_response(true, 404, 'Usuário não foi encontrado para remoção.', null);
+                    return generate_response(false, 404, 'Usuário não foi encontrado para remoção.', null, $identifier);
                 }
                 
                 return generate_response(true, 200, 'Usuário apagado com sucesso!', null);

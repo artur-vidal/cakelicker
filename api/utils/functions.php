@@ -7,7 +7,7 @@
         $generated = [
             'caller_origin' => $debug_info[0]['file'],
             'line_called' => $debug_info[0]['line'],
-            'status' => ($success) ? 'success' : 'failure',
+            'success' => $success,
             'message' => $message,
             'debug_message' => $debug_message,
             'data' => $data
@@ -20,6 +20,11 @@
         }
 
         return $generated;
+    }
+
+    function respond($response) {
+        echo json_encode($response);
+        exit;
     }
 
     function array_has_keys($keys, $array) {
