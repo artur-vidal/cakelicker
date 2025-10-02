@@ -25,7 +25,7 @@
             $save_identifier = max(1, $save_identifier);
             
             if($save_identifier > SAVES_PER_USER)
-                return ResponseHelper::generate(false, 400, 'Cada usuário só pode ter no máximo 3 saves.', null, $save_identifier);
+                return ResponseHelper::generateBuilder(false, 400, 'Cada usuário só pode ter no máximo 3 saves.', null, $save_identifier);
 
             try {
                 
@@ -33,21 +33,21 @@
                     $identifier = $this->userModel->findNumericIdFromUsername($identifier);
 
                 if(!$identifier)
-                    return ResponseHelper::generate(false, 404, 'Não existe usuário com esse identificador, ou o identificador é inválido.', null);
+                    return ResponseHelper::generateBuilder(false, 404, 'Não existe usuário com esse identificador, ou o identificador é inválido.', null);
                 
                 $saves_found = $this->saveModel->getSavesByUserId($identifier);
 
                 if($saves_found) {
                     if(isset($saves_found[$save_identifier - 1]))
-                        return ResponseHelper::generate(true, 200, 'Save encontrado.', null, $saves_found[$save_identifier - 1]);
+                        return ResponseHelper::generateBuilder(true, 200, 'Save encontrado.', null, $saves_found[$save_identifier - 1]);
                     else
-                        return ResponseHelper::generate(false, 404, 'O usuário não tem esse save.', null, $save_identifier);
+                        return ResponseHelper::generateBuilder(false, 404, 'O usuário não tem esse save.', null, $save_identifier);
                 } else {
-                    return ResponseHelper::generate(false, 404, 'Não foi encontrado nenhum save vinculado a esse usuário. Certifique-se de que o usuário em questão existe.', null);
+                    return ResponseHelper::generateBuilder(false, 404, 'Não foi encontrado nenhum save vinculado a esse usuário. Certifique-se de que o usuário em questão existe.', null);
                 }
 
             } catch(PDOException $err) {
-                return ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage());
+                return ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage());
             }
         }
 
@@ -59,18 +59,18 @@
                     $identifier = $this->userModel->findNumericIdFromUsername($identifier);
 
                 if(!$identifier)
-                    return ResponseHelper::generate(false, 404, 'Não existe usuário com esse identificador, ou o identificador é inválido.', null);
+                    return ResponseHelper::generateBuilder(false, 404, 'Não existe usuário com esse identificador, ou o identificador é inválido.', null);
                 
                 $saves_found = $this->saveModel->getSavesByUserId($identifier);
 
                 if($saves_found) {
-                    return ResponseHelper::generate(true, 200, 'Saves encontrados.', null, $saves_found);
+                    return ResponseHelper::generateBuilder(true, 200, 'Saves encontrados.', null, $saves_found);
                 } else {
-                    return ResponseHelper::generate(false, 404, 'Não foi encontrado nenhum save vinculado a esse usuário. Certifique-se de que o usuário em questão existe.', null, $identifier);
+                    return ResponseHelper::generateBuilder(false, 404, 'Não foi encontrado nenhum save vinculado a esse usuário. Certifique-se de que o usuário em questão existe.', null, $identifier);
                 }
 
             } catch(PDOException $err) {
-                return ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage());
+                return ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage());
             }
         }
     }

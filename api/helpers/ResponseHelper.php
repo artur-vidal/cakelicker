@@ -1,30 +1,32 @@
 <?php
 
     namespace Cakelicker\Helpers;
-
-    use Cakelicker\ValueObjects\Response;
+    use Cakelicker\ValueObjects\ResponseBuilder;
 
     class ResponseHelper {
         
-        public static function generate($success, $code, $message, $debug_message, $data = null) {
-            $response = new Response(
+        public static function generateBuilder($success, $code, $message, $debug_message, $data = null) {
+            $debug_info = debug_backtrace();
+
+            $responseBuilder = new ResponseBuilder(
                 $success,
-                $code,
-                $message,
-                $debug_message,
-                $data
+                $code
             );
 
-            $response->addHeader('Content-Type', 'application/json');
-
-            $debug_info = debug_backtrace();
-            $response->addAdditionalField('caller_origin', $debug_info[0]['file']);
-            $response->addAdditionalField('line_called', $debug_info[0]['line']);
+            $responseBuilder->setMessage($message)
+                ->setData($data)
+                ->addHeader('Content-Type', 'application/json')
+                ->addAdditionalField('caller_origin', $debug_info[0]['file'])
+                ->addAdditionalField('line_called', $debug_info[0]['line']);
 
             if(!IS_LOCAL)
-                $response->eraseSensitiveInfo();
+                $responseBuilder->eraseSensitiveInfo();
 
-            return $response;
+            return $responseBuilder;
+        }
+
+        public static function buildAndRespond($response_builder) {
+            self::respond($response_builder->build());
         }
 
         public static function respond($response_object) {

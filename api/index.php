@@ -9,14 +9,16 @@
     $data = json_decode(file_get_contents('php://input'), true);
     $method = $_SERVER['REQUEST_METHOD'];
 
-    $response = null;
+    $response_builder = null;
 
     $uri_parts = parse_url($_SERVER['REQUEST_URI']);
     $endpoint_parts = array_slice(explode('/', $uri_parts['path']), 3) ?? null;
     // partes apenas a partir de localhost/cakelicker/api/
 
-    if(!$endpoint_parts || $endpoint_parts[0] == '')
-        ResponseHelper::respond(ResponseHelper::generate(true, 200, 'Sem rota', null));
+    if(!$endpoint_parts || $endpoint_parts[0] == '') {
+        $response_builder = ResponseHelper::generateBuilder(true, 200, 'Sem rota', null);
+        ResponseHelper::buildAndRespond($response_builder);
+    }
 
     switch($endpoint_parts[0]) {
         case 'users':
@@ -26,10 +28,11 @@
             require_once __DIR__ . '\\routes\\login.php';
             break;
         default:
-            $response = ResponseHelper::generate(true, 200, 'Rota inválida.', null);
+            $response_builder = ResponseHelper::generateBuilder(true, 200, 'Rota inválida.', null);
             break;
     }
 
-    $response->addAdditionalField('elapsed_in_seconds', round(microtime(true) - $start_time, 3));
-    ResponseHelper::respond($response);
-?>
+    $response_builder->addAdditionalField('elapsed_in_seconds', round(microtime(true) - $start_time, 3));
+    ResponseHelper::buildAndRespond($response_builder);
+    
+?> 

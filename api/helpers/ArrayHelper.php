@@ -29,21 +29,6 @@
 
             return $new_arr;
         }
-
-        public static function filterResponseData($new_fields, $response) {
-            $new_data = [];
-
-            if(array_is_list($response['data'])) {
-
-                for($i = 0; $i < count($response['data']); $i++) {
-                    $new_data[] = self::filterArrayKeys($field_array, $response['data'][$i]);
-                }
-
-            } else {
-                $new_data = self::filterArrayKeys($field_array, $response['data']);
-            }
-
-            return $new_data;
-        }
+        
     }
 ?>

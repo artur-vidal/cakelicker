@@ -12,19 +12,14 @@
         private $headers;
         private $additional_fields;
 
-        public function __construct($success, $status_code, $message, $debug_message, $data) {
+        public function __construct($success, $status_code, $message, $debug_message, $data, $headers, $additional_fields) {
             $this->success = $success;
             $this->code = $status_code;
             $this->message = $message;
             $this->debug_message = $debug_message;
             $this->data = $data;
-
-            $this->headers = [];
-            $this->additional_fields = [];
-        }
-
-        public function addHeader($header_name, $header_value) {
-            $this->headers[$header_name] = $header_value;
+            $this->headers = $headers;
+            $this->additional_fields = $additional_fields;
         }
 
         public function getHeadersAsStrings() {
@@ -35,28 +30,20 @@
             return $header_array;
         }
 
-        public function addAdditionalField($field_name, $field_value) {
-            $this->additional_fields[$field_name] = $field_value;
-        }
-
-        public function eraseSensitiveInfo() {
-            $this->debug_message = false;
-        }
-
         public function getResponseAsAssocArray() {
-            $response_array = [];
+            $responseBuilder_array = [];
 
-            $response_array['success'] = $this->success;
+            $responseBuilder_array['success'] = $this->success;
 
             foreach($this->additional_fields as $field => $value) {
-                $response_array[$field] = $value;
+                $responseBuilder_array[$field] = $value;
             }
 
-            $response_array['message'] = $this->message;
-            $response_array['debug_message'] = $this->debug_message;
-            $response_array['data'] = $this->data;
+            $responseBuilder_array['message'] = $this->message;
+            $responseBuilder_array['debug_message'] = $this->debug_message;
+            $responseBuilder_array['data'] = $this->data;
 
-            return $response_array;
+            return $responseBuilder_array;
         }
 
         public function getCode() {

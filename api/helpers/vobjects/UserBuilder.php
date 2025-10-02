@@ -84,7 +84,7 @@
                 'password' => $this->password,
                 'birthdate' => $this->birthdate
             ];
-            $set_fields = array_filter($fields, fn($value) => $value != null);
+            $set_fields = array_filter($fields, fn($value) => $value !== null);
             return count($set_fields);
         }
 

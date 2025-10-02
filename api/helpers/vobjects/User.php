@@ -23,12 +23,12 @@
             $this->setIfPresentAndValid($password, 'password', 'validatePassword', 'Senha deve ter pelo menos 8 caracteres, uma letra maiúscula e um número.');
             $this->setIfPresentAndValid($birthdate, 'birthdate', 'validateBirthdate', 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.');
 
-            if($password != null)
+            if($password !== null)
                 $this->password = password_hash($this->password, PASSWORD_BCRYPT);
         }
 
         private function setIfPresentAndValid($value, $propertyName, $validationMethod, $exceptionMessage) {
-            if($value != null) {
+            if($value !== null) {
                 if(!$this->$validationMethod($value))
                     throw new Exception($exceptionMessage, 400);
 
@@ -43,7 +43,7 @@
                 'email' => $this->getEmail(),
                 'password' => $this->getHashedPassword(),
                 'birthdate' => $this->getBirthdate()
-            ], fn($value) => $value != null);
+            ], fn($value) => $value !== null);
             return $return_array;
         }
 

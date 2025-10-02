@@ -23,7 +23,6 @@
 
         public function getUser($identifier) {
             try {
-
                 if (is_numeric($identifier)) {
                     $get_statement = $this->conn->prepare('SELECT ' . $this->querySelectColumnsAsString . ' FROM users WHERE id = :id');
                     $get_statement->execute(['id' => (int)$identifier]);
@@ -111,20 +110,20 @@
                 $params[$field] = $value;
             }
 
-            $where_clause_string = '';
+            $where_clause = '';
             if(is_numeric($identifier)) {
-                $where_clause_string = 'id = :identifier';
+                $where_clause = 'id = :identifier';
                 $params['identifier'] = (int)$identifier;
             } else {
-                $where_clause_string = 'username = :identifier';
+                $where_clause = 'username = :identifier';
                 $params['identifier'] = $identifier;
             }
 
             try {
                 $this->conn->beginTransaction();
                 
-                $set_clauses_string = implode(', ', $update_clauses);
-                $query = "UPDATE users SET $set_clauses_string WHERE $where_clause_string";
+                $set_clauses = implode(', ', $update_clauses);
+                $query = "UPDATE users SET $set_clauses WHERE $where_clause";
 
                 $update_statement = $this->conn->prepare($query);
                 $update_statement->execute($params);
@@ -132,6 +131,37 @@
                 $this->conn->commit();
             } catch(PDOException $err) {
                 $this->conn->rollBack();
+                throw $err;
+            }
+        }
+
+        public function deleteUser($identifier) {
+            if(!$this->validateIdentifier($identifier)) {
+                throw new Exception('Identificador inválido.', 400);
+            }
+
+            $where_clause = '';
+            $params = [];
+            if(is_numeric($identifier)) {
+                $where_clause = 'id = :identifier';
+                $params['identifier'] = (int)$identifier;
+            } else {
+                $where_clause = 'username = :identifier';
+                $params['identifier'] = $identifier;
+            }
+
+            try {
+                $this->conn->beginTransaction();
+
+                $delete_statememt = $this->conn->prepare('DELETE FROM users WHERE '. $where_clause);
+                $delete_statememt->execute($params);
+
+                if($delete_statememt->rowCount() == 0) 
+                    throw new Exception('Nenhum usuário encontrado para remoção.', 404);
+
+                $this->conn->commit();
+            } catch(PDOException $err) {
+                $this->rollBack();
                 throw $err;
             }
         }
