@@ -1,17 +1,23 @@
 <?php
 
-    require_once __DIR__ . '\\traits\\ValidationTraits.php';
+    namespace Cakelicker\Controllers;
+    use Cakelicker\Traits\ValidationTraits;
+    use Cakelicker\Models\UserModel;
+    use Cakelicker\Helpers\{ResponseHelper, ArrayHelper};
+    use Cakelicker\ValueObjects\{PaginationParams, UserBuilder};
+
+    use PDO;
+    use PDOException;
+    use Exception;
 
     class UserController {
-
-        use ValidationTraits;
         
-        private $conn;
+        private $userModel;
 
         public function __construct($dbconn) {
 
             // definindo variáveis
-            $this->conn = $dbconn;
+            $this->userModel = new UserModel($dbconn);
 
             // garantindo que a pasta de saves exista
             if(!is_dir(UPLOAD_DIR)){
@@ -19,346 +25,81 @@
             }
         }
 
-        private function searchDuplicateUser($username, $email) {
-            $same_user_query = $this->conn->prepare('SELECT 1 FROM users WHERE username = :username OR email = :email LIMIT 1');
-            $same_user_query->execute(['username' => $username, 'email' => $email]);
-
-            return $same_user_query->fetch(PDO::FETCH_COLUMN) != 0;
-        }
-
-        private function findPresetId($preset) {
-
-            switch($preset) {
-                case 'first':
-                    $new_id = $this->getFirstUserId();
-                    break;
-
-                case 'last':
-                    $new_id = $this->getLastUserId();
-                    break;
-                default:
-                    $new_id = $preset;
-                    break;
-            }
-
-            return $new_id;
-
-        }
-
-        public function getFirstUserId() {
-            try {
-                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1');
-                $id_query->execute();
-
-                $val = $id_query->fetch(PDO::FETCH_COLUMN);
-
-                return ($val) ? $val : null;
-
-            } catch(PDOException $err) {
-                respond(generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage()));
-            }
-        }
-
-        public function getLastUserId() {
-            try {
-                $id_query = $this->conn->prepare('SELECT id FROM users ORDER BY id DESC LIMIT 1');
-                $id_query->execute();
-
-                $val = $id_query->fetch(PDO::FETCH_COLUMN);
-
-                return ($val) ? $val : null;
-
-            } catch(PDOException $err) {
-                respond(generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage()));
-            }
-        }
-
         public function getUser($identifier) {
-
             try {
+                if($this->isPreset($identifier))
+                    $identifier = $this->presetToId($identifier);
 
-                $query_first_part = 'SELECT id, username, nickname, email, birthdate, creationdate FROM users WHERE ';
-                $identifier = $this->findPresetId($identifier);
-
-                if ($this->validateId($identifier)) {
-                    $stmt = $this->conn->prepare($query_first_part . 'id = :id');
-                    $stmt->execute(['id' => (int)$identifier]);
-                } else {
-                    $stmt = $this->conn->prepare($query_first_part .  'username = :username');
-                    $stmt->execute(['username' => $identifier]);
-                }
-
-                $user_found = $stmt->fetch(PDO::FETCH_ASSOC);
+                $user_found = $this->userModel->getUser($identifier);
 
                 if($user_found){
-                    return generate_response(true, 200, 'Usuário encontrado.', null, $user_found);
+                    return ResponseHelper::generate(true, 200, 'Usuário encontrado.', null, $user_found);
                 } else {
-                    return generate_response(false, 404, 'Não existe usuário com esse identificador.', null, $identifier);
+                    return ResponseHelper::generate(false, 404, 'Não existe usuário com esse identificador.', null, $identifier);
                 }
-
             } catch(PDOException $err) {
-                return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage(), $identifier);
+                return ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage(), $identifier);
             }
         }
 
-        public function getUsers($page, $offset, $per_page, $order_param, $order_direction) {
-
-            // restringindo parâmetros permitidos por segurança
-            $column_whitelist = ['id', 'username', 'email', 'nickname', 'birthdate', 'creationdate'];
-            $order_direction_whitelist = ['ASC', 'DESC'];
-
-            // garantindo que os parametro estejam em limites razoáveis
-            $page = max(1, (int)$page);
-            $offset = max(0, (int)$offset);
-            $per_page = min(max(1, (int)$per_page), 150);
-
-            if(!in_array($order_param, $column_whitelist)) $order_param = 'id';
-            if(!in_array(strtoupper($order_direction), $order_direction_whitelist)) $order_direction = 'ASC';
-
-            $first_page = $per_page * ($page - 1) + $offset;
+        public function getPagedUsers($page, $offset, $per_page, $order_param, $order_direction) {
+            $paginationParamsObject = new PaginationParams($page,  $per_page, $offset, $order_param, $order_direction);
 
             try {
-                $stmt = $this->conn->prepare("SELECT id, username, nickname, email, birthdate, creationdate FROM users ORDER BY $order_param $order_direction LIMIT :lim OFFSET :off");
-                $stmt->bindValue(':off', $first_page, PDO::PARAM_INT);
-                $stmt->bindValue(':lim', $per_page, PDO::PARAM_INT);
-                $stmt->execute();
-
-                $users_found = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $users_found = $this->userModel->getPagedUsers($paginationParamsObject);
 
                 if($users_found){
-                    return generate_response(true, 200, 'Usuários encontrados.',null , $users_found);
+                    return ResponseHelper::generate(true, 200, 'Usuários encontrados.', null, $users_found);
                 } else {
-                    return generate_response(false, 404, 'Usuários não foram encontrados.', null);
+                    return ResponseHelper::generate(false, 404, 'Usuários não foram encontrados.', null);
                 }
-
             } catch(PDOException $err) {
-                return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage());
+                return ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage());
             }
         }
 
         public function createUser($user_info_array) { 
+            $user_columns = ['username', 'nickname', 'email', 'password', 'birthdate'];
+            if(!ArrayHelper::arrayHasKeys($user_columns, $user_info_array))
+                return ResponseHelper::generate(false, 400, 'Dados insuficientes para criar usuário', null, $user_info_array);
 
-            // verificando se veio tudo junto primeiro
-            if(!array_has_keys(['username', 'nickname', 'email', 'password', 'birthdate'], $user_info_array)) {
-                return generate_response(false, 400, 'Dados insuficientes para criar usuário', null, $user_info_array);
-            }
-
-            // validando o resto das coisas
-            if(!$this->validateUsername($user_info_array['username'])) {
-                return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', null, $user_info_array['username']);
-            }
-
-            if(!$this->validatePassword($user_info_array['password'])) {
-                return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', null, $user_info_array['password']);
-            }
-
-            if(!$this->validateEmail($user_info_array['email'])) {
-                return generate_response(false, 401, 'E-mail precisa seguir formato padrão exemplo@gmail.com', null, $user_info_array['email']);
-            }
-
-            if(!$this->validateBirthdate($user_info_array['birthdate'])) {
-                return generate_response(false, 401, 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.', null, $user_info_array['birthdate']);
-            }
-
-            // TRANSAÇÃO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             try {
+                $user_builder = new UserBuilder();
+                $user_builder->withUsername($user_info_array['username'])
+                    ->withNickname($user_info_array['nickname'])
+                    ->withEmail($user_info_array['email'])
+                    ->withPassword($user_info_array['password'])
+                    ->withBirthdate($user_info_array['birthdate']);
 
-                // iniciando transação
-                $this->conn->beginTransaction();
-
-                // verifico se já existe usuário com esse user ou email🔥
-                if($this->searchDuplicateUser($user_info_array['username'], $user_info_array['email'])) {
-                    $this->conn->rollBack();
-                    return generate_response(false, 409, 'Já existe um usuário com esse @ ou e-mail registrado.', null, ['username' => $user_info_array['username'], 'email' => $user_info_array['email']]);
+                if(!$user_builder->isComplete()) {
+                    return ResponseHelper::generate(false, 400, 'Dados insuficientes para criação do usuário.', null, $user_info_array);
                 }
-                
-                // criando usuario
-                $encrypted_password = password_hash($user_info_array['password'], PASSWORD_BCRYPT);
 
-                $user_stmt = $this->conn->prepare('INSERT INTO users(username, email, password, nickname, birthdate) VALUES(:username, :email, :password, :nickname, :birthdate)');
+                $user_object = $user_builder->build();
 
-                // executando registramento épico !!!!1!1! !! !  1!1!
-                $new_user_info = [
-                    'username' => $user_info_array['username'], 
-                    'email' => $user_info_array['email'], 
-                    'password' => $encrypted_password, 
-                    'nickname' => $user_info_array['nickname'],
-                    'birthdate' => $user_info_array['birthdate']
-                ];
-                $user_stmt->execute($new_user_info);
+                $created_user_id = $this->userModel->createUserAndGetId($user_object);
 
-                // pegando id do usuario que foi registrado
-                $last_saved_user = $this->conn->lastInsertId();
-
-                // gerando nome aleatório de arquivo sem duplicar pra garrantir
-                do {
-                    $filename = bin2hex(random_bytes(16)) . '_savefile.json';
-                } while(file_exists(UPLOAD_DIR . $filename));
-                
-                // criando save e pegando ID dele
-                $save_stmt = $this->conn->prepare('INSERT INTO saves(savepath, userid) VALUES(:savepath, :userid)');
-                $save_stmt->execute(['savepath' => $filename, 'userid' => $last_saved_user]);
-
-                // salvando arquivo
-                file_put_contents(UPLOAD_DIR . $filename, json_encode([]));
-            
-                $this->conn->commit();
-
-                // voltando com uma resposta falano que deu certo
-
-                // colocando id e tirando senha
-                $new_user_info['id'] = $last_saved_user;
-                unset($new_user_info['password']);
-                return generate_response(true, 201, 'Sucesso no registro!', null, $new_user_info);
-
+                $response_data = ArrayHelper::filterArrayKeys($user_columns, $user_info_array);
+                $response_data['id'] = $created_user_id;
+                unset($response_data['password']);
+                return ResponseHelper::generate(true, 201, 'Sucesso no registro!', null, $response_data);
+            } catch (PDOException $err) {
+                return ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage());
             } catch (Exception $err) {
-
-                // fazendo rollback (caso esteja em transação) 
-                $this->conn->rollBack();
-
-                // retirando arquivo (caso exista)
-                if(isset($filename) && is_file(UPLOAD_DIR . $filename)) {
-                    @unlink(UPLOAD_DIR . $filename); // @ pra não dar warning
-                }
-
-                return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage());
-
+                return ResponseHelper::generate(false, $err->getCode(), null, $err->getMessage());
             }
-
         }
 
         public function updateUser($identifier, $info_array) {
-
-            // validando identificador - se não for nem id nem user valido, eu retorno direto
-            if(!$this->validateIdentifier($identifier)) {
-                return generate_response(false, 400, 'Identificador inválido.', null, $identifier);
-            }
-
-            // validando cada campo fornecido e guardando no array a cada sucesso
-            $to_be_altered = [];
-            
-            // username
-            if(isset($info_array['username'])) {
-
-                if($this->searchDuplicateUser($info_array['username'], null)) {
-                    return generate_response(false, 409, 'Já existe um usuário com esse @', null, $info_array['username']);
-                }
-                    
-                if(!$this->validateUsername($info_array['username'])) {
-                    return generate_response(false, 401, 'Nome de usuário só pode ter letras minúsculas, números e nenhum espaço, ao menos 4 caracteres.', null, $info_array['username']);
-                }
-
-                $to_be_altered['username'] = $info_array['username'];
-
-            }
-
-            // nickname (não precisa de validação)
-            if(isset($info_array['nickname'])) {
-
-                $to_be_altered['nickname'] = $info_array['nickname'];
-
-            }
-
-            // email
-            if(isset($info_array['email'])) {
-
-                if($this->searchDuplicateUser(null, $info_array['email'])) {
-                    return generate_response(false, 409, 'Já existe um usuário com esse email.', null, $info_array['email']);
-                }
-                    
-                if(!$this->validateEmail($info_array['email'])) {
-                    return generate_response(false, 401, 'E-mail precisa seguir formato padrão exemplo@gmail.com', null, $info_array['email']);
-                }
-
-                $to_be_altered['email'] = $info_array['email'];
-
-            }
-
-            // senha
-            if(isset($info_array['password'])) {
-
-                if(!$this->validatePassword($info_array['password'])) {
-                    return generate_response(false, 401, 'Senha precisa ter ao menos uma letra maiúscula, uma minúscula, um dígito e mínimo de 8 caracteres.', null, $info_array['password']);
-                }
-
-                $to_be_altered['password'] = password_hash($info_array['password'], PASSWORD_BCRYPT);
-
-            }
-
-            // data de nascimento
-            if(isset($info_array['birthdate'])) {
-
-                if(!$this->validateBirthdate($info_array['birthdate'])) {
-                    return generate_response(false, 409, 'Data de nascimento tem que estar em formato YYYY-MM-DD, não ser futura e estar depois de 1900-01-01.', null, $info_array['birthdate']);
-                }
-
-                $to_be_altered['birthdate'] = $info_array['birthdate'];
-
-            }
-
-            // tentando achar o usuário
             try {
-                $query_first_part = 'SELECT id, username, nickname, email, password, birthdate FROM users WHERE ';
+                $user_builder = new UserBuilder();
+                $user_object = $user_builder->fillFromAssocArrayAndBuild($info_array);
 
-                if ($this->validateId($identifier)) {
-                    $user_query = $this->conn->prepare($query_first_part . 'id = :id');
-                    $user_query->execute(['id' => (int)$identifier]);
-                } else {
-                    $user_query = $this->conn->prepare($query_first_part . 'username = :username');
-                    $user_query->execute(['username' => $identifier]);
-                }
+                $updated_user = $this->userModel->updateUserAndReturn($identifier, $user_object);
 
-                $user_found = $user_query->fetch(PDO::FETCH_ASSOC);
-                
-                if(!$user_found) {
-                    return generate_response(false, 404, 'Não existe usuário com esse identificador.', null, $identifier);
-                }
-
-            } catch(PDOException $err) {
-                return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage());
-            }
-
-            // depois de achar o usuário, eu valido as novas infos criando um novo usuário e substituindo com os novos dados
-            $new_user_info = $user_found;
-
-            // se não tiver o que alterar, já retorno de uma vez
-            if(empty($to_be_altered)) {
-                return generate_response(true, 200, 'Nenhuma informação utilizável fornecida para alteração.', 'keys aceitas: username, nickname, email, password, birthdate', $info_array);
-            }
-
-            // criando código e parametros para a query update
-            $query_fields = [];
-            $query_params = ['id' => $user_found['id']];
-
-            foreach($to_be_altered as $field => $value) {
-                $query_fields[] = "$field = :$field";
-                $query_params[$field] = $value;
-                $new_user_info[$field] = $value;
-            }
-
-
-            // rodando query final!!!!!!
-            try {
-                
-                $this->conn->beginTransaction();
-
-                // juntando os fields pra colocar na query
-                $update_set = implode(', ', $query_fields);
-
-                $update_stmt = $this->conn->prepare("UPDATE users SET $update_set WHERE id = :id");
-                $update_stmt->execute($query_params);
-
-                $this->conn->commit();
-
-                unset($new_user_info['password']);
-                return generate_response(true, 200, 'Usuário atualizado com sucesso.', null, $new_user_info);
-
-
-            } catch(PDOException $err) {
-
-                $this->conn->rollBack();
-                return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage());
-
+                return ResponseHelper::generate(true, 200, 'Usuário atualizado com sucesso.', null, $updated_user);
+            } catch(Exception $err) {
+                return ResponseHelper::generate(false, $err->getCode(), null, $err->getMessage());
             }
         }
 
@@ -377,16 +118,40 @@
                 }
 
                 if($delete_stmt->rowCount() == 0) {
-                    return generate_response(false, 404, 'Usuário não foi encontrado para remoção.', null, $identifier);
+                    return ResponseHelper::generate(false, 404, 'Usuário não foi encontrado para remoção.', null, $identifier);
                 }
                 
-                return generate_response(true, 200, 'Usuário apagado com sucesso!', null);
+                return ResponseHelper::generate(true, 200, 'Usuário apagado com sucesso!', null);
 
 
             } catch(PDOException $err) {
-                return generate_response(false, 500, 'Erro no banco de dados.', $err->getMessage());
+                return ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage());
             }
         }
+
+        private function isPreset($value) {
+            return in_array($value, USER_ENDPOINT_PRESETS);
+        }
+
+        private function presetToId($preset) {
+            try {
+                switch($preset) {
+                    case 'first':
+                        $new_id = $this->userModel->getFirstUserId();
+                        break;
+
+                    case 'last':
+                        $new_id = $this->userModel->getLastUserId();
+                        break;
+                }
+
+                return $new_id;
+            } catch(Exception $err) {
+                $error_response = ResponseHelper::generate(false, 500, 'Erro no banco de dados.', $err->getMessage());
+                ResponseHelper::respond($error_response);
+            }
+        }
+
     }
 
 ?>

@@ -1,2 +1,3 @@
 api/uploads/
+api/vendor/
 api/.env

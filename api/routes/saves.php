@@ -1,8 +1,6 @@
 <?php
 
-    require_once __DIR__ . '\\..\\controllers\\SaveController.php';
-
-    $s_controller = new SaveController($conn);
+    $s_controller = new Cakelicker\Controllers\SaveController($conn);
     $save_id = $endpoint_parts[3] ?? null;
 
     switch($method) {

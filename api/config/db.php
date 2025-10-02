@@ -1,5 +1,7 @@
 <?php
 
+    use Cakelicker\Helpers\ResponseHelper;
+    
     $dbhost = $_ENV['DB_HOST'] . ':' . $_ENV['DB_PORT'];
     $dbuser = $_ENV['DB_USER'];
     $dbpassword = $_ENV['DB_PASSWORD'];
@@ -15,7 +17,7 @@
         $conn->exec($query_content);
 
     } catch (PDOException $err) {
-        echo json_encode(generate_response(false, 500, 'Ocorreu um erro na conexão com o banco de dados.', $err->getMessage()));
+        echo json_encode(ResponseHelper::generate(false, 500, 'Ocorreu um erro na conexão com o banco de dados.', $err->getMessage()));
         exit;
     }
 
