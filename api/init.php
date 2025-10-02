@@ -6,8 +6,6 @@
     define('USER_ENDPOINT_PRESETS', ['first', 'last']);
     define('SAVES_PER_USER', 3);
 
-    header('Content-Type: application/json; charset=utf-8');
-
     require_once __DIR__ . '\\vendor\\autoload.php';
     use Dotenv\Dotenv;
     $dotenv = Dotenv::createImmutable(__DIR__);

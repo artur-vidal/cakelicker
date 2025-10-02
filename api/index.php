@@ -2,6 +2,8 @@
 
     require_once __DIR__ . '\\init.php';
 
+    $start_time = microtime(true);
+
     use Cakelicker\Helpers\{ResponseHelper, ArrayHelper};
     
     $data = json_decode(file_get_contents('php://input'), true);
@@ -28,5 +30,6 @@
             break;
     }
 
+    $response->addAdditionalField('elapsed_in_seconds', round(microtime(true) - $start_time, 3));
     ResponseHelper::respond($response);
 ?>

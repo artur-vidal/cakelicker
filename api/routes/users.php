@@ -1,5 +1,7 @@
 <?php
 
+    use Cakelicker\Helpers\ResponseHelper;
+
     $user_controller = new Cakelicker\Controllers\UserController($conn);
     $user_id = $endpoint_parts[1] ?? null;
     $subresource = $endpoint_parts[2] ?? null;
@@ -19,8 +21,7 @@
                 break;
         }
     } else {
-
-        if(($method == 'PUT' || $method == 'DELETE') && in_array($user_id, USER_ENDPOINT_PRESETS)) {
+        if(($method == 'PUT' || $method == 'DELETE') && $user_controller->isPreset($user_id)) {
             $error_response = ResponseHelper::generate(false, 400, 'Não é possível usar presets com PUT ou DELETE.', null);
             ResponseHelper::respond($error_response);
         }
@@ -41,7 +42,7 @@
 
                 if(isset($_GET['fields'])) {
                     $fields = array_filter(explode(',', $_GET['fields']));
-                    $response['data'] = filter_response_data($fields, $response['data']);
+                    $response['data'] = ArrayHelper::filterArrayKeys($fields, $response['data']);
                 }
                 break;
             

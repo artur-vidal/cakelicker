@@ -2,33 +2,42 @@
 
     namespace Cakelicker\Helpers;
 
-    class ResponseHelper {
-        public static function generate($success, $code, $message, $debug_message, $data = null) {
-            $debug_info = debug_backtrace();
-        
-            http_response_code($code);
-            $generated = [
-                'caller_origin' => $debug_info[0]['file'],
-                'line_called' => $debug_info[0]['line'],
-                'success' => $success,
-                'message' => $message,
-                'debug_message' => $debug_message,
-                'data' => $data
-            ];
+    use Cakelicker\ValueObjects\Response;
 
-            if(!IS_LOCAL) {
-                unset($generated['caller_origin']);
-                unset($generated['line_called']);
-                unset($generated['debug_message']);
+    class ResponseHelper {
+        
+        public static function generate($success, $code, $message, $debug_message, $data = null) {
+            $response = new Response(
+                $success,
+                $code,
+                $message,
+                $debug_message,
+                $data
+            );
+
+            $response->addHeader('Content-Type', 'application/json');
+
+            $debug_info = debug_backtrace();
+            $response->addAdditionalField('caller_origin', $debug_info[0]['file']);
+            $response->addAdditionalField('line_called', $debug_info[0]['line']);
+
+            if(!IS_LOCAL)
+                $response->eraseSensitiveInfo();
+
+            return $response;
+        }
+
+        public static function respond($response_object) {
+            $headers = $response_object->getHeadersAsStrings();
+            for($i = 0; $i < count($headers); $i++) {
+                header($headers[$i]);
             }
 
-            return $generated;
-        }
-
-        public static function respond($response) {
-            echo json_encode($response);
+            http_response_code($response_object->getCode());
+            echo json_encode($response_object->getResponseAsAssocArray());
             exit;
         }
+
     }
 
 

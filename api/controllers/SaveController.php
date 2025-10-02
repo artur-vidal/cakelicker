@@ -29,7 +29,8 @@
 
             try {
                 
-                $identifier = $this->userModel->getNumericIdFromIdentifier($identifier);
+                if(!is_numeric($identifier))
+                    $identifier = $this->userModel->findNumericIdFromUsername($identifier);
 
                 if(!$identifier)
                     return ResponseHelper::generate(false, 404, 'Não existe usuário com esse identificador, ou o identificador é inválido.', null);
@@ -54,7 +55,8 @@
 
             try {
                 
-                $identifier = $this->userModel->getNumericIdFromIdentifier($identifier);
+                if(!is_numeric($identifier))
+                    $identifier = $this->userModel->findNumericIdFromUsername($identifier);
 
                 if(!$identifier)
                     return ResponseHelper::generate(false, 404, 'Não existe usuário com esse identificador, ou o identificador é inválido.', null);
