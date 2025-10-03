@@ -4,7 +4,8 @@
     use Cakelicker\Traits\ValidationTraits;
     use Cakelicker\Models\UserModel;
     use Cakelicker\Helpers\{ResponseHelper, ArrayHelper};
-    use Cakelicker\ValueObjects\{PaginationParams, UserBuilder};
+    use Cakelicker\ValueObjects\PaginationParams;
+    use Cakelicker\InputObjects\UserInput;
 
     class UserController {
         
@@ -34,10 +35,15 @@
         }
 
         public function getPagedUsers($page, $offset, $per_page, $order_param, $order_direction) {
-            $paginationParamsObject = new PaginationParams($page,  $per_page, $offset, $order_param, $order_direction);
+            $pagination_params_object = new PaginationParams();
+            $pagination_params_object->setPage($page)
+                ->setOffset($offset)
+                ->setPerPageLimit($per_page)
+                ->setSortColumn($order_param)
+                ->setSortDirection($order_direction);
 
             try {
-                $users_found = $this->userModel->getPagedUsers($paginationParamsObject);
+                $users_found = $this->userModel->getPagedUsers($pagination_params_object);
 
                 if($users_found){
                     return ResponseHelper::generateBuilder(true, 200, 'Usuários encontrados.', null, $users_found);
@@ -51,17 +57,15 @@
 
         public function createUser($user_info) {
             try {
-                $user_builder = new UserBuilder();
-                $user_builder->fillFromAssocArray($user_info);
+                $user_input = new UserInput();
+                $user_input->fillFromAssocArray($user_info);
 
-                if(!$user_builder->isComplete())
+                if(!$user_input->isComplete())
                     return ResponseHelper::generateBuilder(false, 400, 'Dados insuficientes para criação do usuário.', null, $user_info);
 
-                $user_object = $user_builder->build();
+                $created_user_id = $this->userModel->createUserAndGetId($user_input);
 
-                $created_user_id = $this->userModel->createUserAndGetId($user_object);
-
-                $user_data_for_response = $user_object->toAssocArray();
+                $user_data_for_response = $user_input->toAssocArray();
                 $user_data_for_response['id'] = $created_user_id;
                 unset($user_data_for_response['password']);
                 
@@ -77,12 +81,12 @@
 
         public function updateUser($identifier, $info_array) {
             try {
-                $user_builder = new UserBuilder();
-                $user_object = $user_builder->fillFromAssocArrayAndBuild($info_array);
+                $user_input = new UserInput();
+                $user_input->fillFromAssocArray($info_array);
 
-                $updated_user = $this->userModel->updateUserAndReturn($identifier, $user_object);
+                $updated_user_data = $this->userModel->updateUserAndReturn($identifier, $user_input);
 
-                return ResponseHelper::generateBuilder(true, 200, 'Usuário atualizado com sucesso.', null, $updated_user);
+                return ResponseHelper::generateBuilder(true, 200, 'Usuário atualizado com sucesso.', null, $updated_user_data);
             } catch(\Exception $err) {
                 return ResponseHelper::generateBuilder(false, $err->getCode(), null, $err->getMessage());
             }

@@ -4,7 +4,7 @@
     use Cakelicker\Traits\ValidationTraits;
     use Cakelicker\Models\{UserModel, SaveModel};
     use Cakelicker\Helpers\ResponseHelper;
-    use Cakelicker\ValueObjects\SaveBuilder;
+    use Cakelicker\InputObjects\SaveInput;
 
     class SaveController {
 

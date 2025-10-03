@@ -32,7 +32,7 @@
             break;
     }
 
-    $response_builder->addAdditionalField('elapsed_in_seconds', round(microtime(true) - $start_time, 3));
+    $response_builder->addAdditionalField('elapsed_seconds_in_server', round(microtime(true) - $start_time, 3));
     ResponseHelper::buildAndRespond($response_builder);
     
 ?> 

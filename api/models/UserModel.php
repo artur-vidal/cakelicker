@@ -34,12 +34,12 @@
             }
         }
 
-        public function getPagedUsers($paginationParamsObject) {
+        public function getPagedUsers($pagination_params_object) {
             try {
-                $order_param = $paginationParamsObject->getSortingColumn();
-                $order_direction = $paginationParamsObject->getSortingDirection();
-                $first_index = $paginationParamsObject->getFirstIndex();
-                $per_page = $paginationParamsObject->getPerPageLimit();
+                $order_param = $pagination_params_object->getSortingColumn();
+                $order_direction = $pagination_params_object->getSortingDirection();
+                $first_index = $pagination_params_object->getFirstIndex();
+                $per_page = $pagination_params_object->getPerPageLimit();
 
                 $get_users_query = "SELECT $this->querySelectColumnsAsString FROM users ORDER BY $order_param $order_direction LIMIT :lim OFFSET :off";
                 
@@ -55,16 +55,16 @@
             }
         }
 
-        public function createUserAndGetId($user_object) {
+        public function createUserAndGetId($user_input) {
             try {
                 $this->conn->beginTransaction();
 
-                if($this->isDuplicateUser($user_object)) {
+                if($this->isDuplicateUser($user_input)) {
                     $this->conn->rollBack();
                     throw new \Exception('Já existe um usuário com esse username ou email.', 409);
                 }
 
-                $params = $user_object->toAssocArray();
+                $params = $user_input->toAssocArray();
 
                 $user_statement = $this->conn->prepare('INSERT INTO users(username, email, password, nickname, birthdate) VALUES(:username, :email, :password, :nickname, :birthdate)');
                 $user_statement->execute($params);
@@ -80,21 +80,21 @@
             }
         }
 
-        public function updateUserAndReturn($identifier, $user_object) {
+        public function updateUserAndReturn($identifier, $user_input) {
             try {
-                $this->updateUser($identifier, $user_object);
+                $this->updateUser($identifier, $user_input);
                 return $this->getUser($identifier);
             } catch(\Exception $err) {
                 throw $err;
             }
         }
 
-        public function updateUser($identifier, $user_object) {
+        public function updateUser($identifier, $user_input) {
             if(!$this->validateIdentifier($identifier)) {
                 throw new \Exception('Identificador inválido.', 400);
             }
 
-            $fields_to_update = $user_object->toAssocArray();
+            $fields_to_update = $user_input->toAssocArrayWithoutNulls();
 
             $update_clauses = [];
             $params = [];

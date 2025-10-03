@@ -7,7 +7,8 @@
             "Cakelicker\\Traits\\": "controllers\\traits\\",
             "Cakelicker\\Controllers\\": "controllers\\",
             "Cakelicker\\Helpers\\": "helpers\\",
-            "Cakelicker\\ValueObjects\\": "helpers\\vobjects\\",
+            "Cakelicker\\ValueObjects\\": "helpers\\valueobjects\\",
+            "Cakelicker\\InputObjects\\": "helpers\\inputobjects\\",
             "Cakelicker\\Models\\": "models\\"
         }
     },
