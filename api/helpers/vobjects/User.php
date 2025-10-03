@@ -1,11 +1,8 @@
 <?php
 
     namespace Cakelicker\ValueObjects;
-
     use Cakelicker\Traits\ValidationTraits;
-
-    use Exception;
-
+    
     class User {
 
         use ValidationTraits;
@@ -30,7 +27,7 @@
         private function setIfPresentAndValid($value, $propertyName, $validationMethod, $exceptionMessage) {
             if($value !== null) {
                 if(!$this->$validationMethod($value))
-                    throw new Exception($exceptionMessage, 400);
+                    throw new \Exception($exceptionMessage, 400);
 
                 $this->$propertyName = $value;
             }

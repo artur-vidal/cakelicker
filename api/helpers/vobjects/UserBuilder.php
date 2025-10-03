@@ -4,8 +4,6 @@
     use Cakelicker\Traits\ValidationTraits;
     use Cakelicker\ValueObjects\User;
 
-    use Exception;
-
     class UserBuilder {
 
         use ValidationTraits;
@@ -22,16 +20,16 @@
         }
 
         public function fillFromAssocArray($array) {
-            $this->withUsername($array['username'] ?? null);
-            $this->withNickname($array['nickname'] ?? null);
-            $this->withEmail($array['email'] ?? null);
-            $this->withPassword($array['password'] ?? null);
-            $this->withBirthdate($array['birthdate'] ?? null);
+            $this->withUsername($array['username'] ?? null)
+                ->withNickname($array['nickname'] ?? null)
+                ->withEmail($array['email'] ?? null)
+                ->withPassword($array['password'] ?? null)
+                ->withBirthdate($array['birthdate'] ?? null);
         }
 
         public function build() {
             if($this->countSetFields() == 0) {
-                throw new Exception('Nenhuma informação fornecida para criar ou atualizar usuário.', 400);
+                throw new \Exception('Nenhuma informação fornecida para criar ou atualizar usuário.', 400);
             }
 
             return new User(

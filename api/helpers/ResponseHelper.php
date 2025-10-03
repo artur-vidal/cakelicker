@@ -14,6 +14,7 @@
             );
 
             $responseBuilder->setMessage($message)
+                ->setDebugMessage($debug_message)
                 ->setData($data)
                 ->addHeader('Content-Type', 'application/json')
                 ->addAdditionalField('caller_origin', $debug_info[0]['file'])

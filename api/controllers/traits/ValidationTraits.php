@@ -6,35 +6,33 @@
     trait ValidationTraits {
 
         protected function validateUsername($username) {
-            // deve ter até 20 caracteres minusculos, numeros, sem espaço, e apenas _ como caractere especial
+            // 4-20 caracteres minusculos/numeros, sem espaço e apenas _ como caractere especial
             return preg_match('/^[a-z0-9_]{4,20}$/', $username);
         }
 
         protected function validateNickname($nickname) {
-            return is_string($nickname) and strlen($nickname) <= 255;
+            // 8-255 caracteres
+            return is_string($nickname) && strlen($nickname) <= 255;
         }
 
         protected function validatePassword($password) {
-            // pelo menos 8 caracteres e com número
+            // pelo menos 8 caracteres, maiuscula e numero
             return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password);
         }
 
         protected function validateEmail($email) {
-            // exemplo@email.com
+            // exemplo@dominio.com
             return filter_var($email, FILTER_VALIDATE_EMAIL);
         }
 
         protected function validateBirthdate($birthdate) {
-            // formato YYYY-MM-DD, se não passar direto eu já retorno
-            if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate)) {
+            // YYYY-MM-DD
+            if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate))
                 return false;
-            }
 
-            // se a data não existir, como 30/02, também retorno
-            $date_parts = array_filter(explode('-', $birthdate)); // separando partes da data
-            if(!checkdate((int) $date_parts[1], (int) $date_parts[2], (int) $date_parts[0])) {
+            $date_parts = array_filter(explode('-', $birthdate));
+            if(!checkdate((int) $date_parts[1], (int) $date_parts[2], (int) $date_parts[0])) // mês, dia, ano
                 return false;
-            }
 
             $birthtime = strtotime($birthdate);
             $future = $birthtime > time();

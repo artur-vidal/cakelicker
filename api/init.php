@@ -12,6 +12,12 @@
     $dotenv->load();
 
     require_once __DIR__ . '\\config\\db.php';
+
+    if(!is_dir(__DIR__ . '\\uploads'))
+        mkdir(__DIR__ . '\\uploads');
+
+    if(!is_dir(__DIR__ . '\\uploads\\saves'))
+        mkdir(__DIR__ . '\\uploads\\saves');
     
     ini_set('display_errors', IS_LOCAL);
 

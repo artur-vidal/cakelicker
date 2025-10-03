@@ -6,10 +6,6 @@
     use Cakelicker\Helpers\{ResponseHelper, ArrayHelper};
     use Cakelicker\ValueObjects\{PaginationParams, UserBuilder};
 
-    use PDO;
-    use PDOException;
-    use Exception;
-
     class UserController {
         
         private $userModel;
@@ -32,7 +28,7 @@
                 } else {
                     return ResponseHelper::generateBuilder(false, 404, 'Não existe usuário com esse identificador.', null, $identifier);
                 }
-            } catch(PDOException $err) {
+            } catch(\PDOException $err) {
                 return ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage(), $identifier);
             }
         }
@@ -48,7 +44,7 @@
                 } else {
                     return ResponseHelper::generateBuilder(false, 404, 'Usuários não foram encontrados.', null);
                 }
-            } catch(PDOException $err) {
+            } catch(\PDOException $err) {
                 return ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage());
             }
         }
@@ -65,15 +61,16 @@
 
                 $created_user_id = $this->userModel->createUserAndGetId($user_object);
 
-                $response_data = ArrayHelper::filterArrayKeys($this->userColumns, $user_info);
-                $response_data['id'] = $created_user_id;
-                unset($response_data['password']);
-                return ResponseHelper::generateBuilder(true, 201, 'Sucesso no registro!', null, $response_data);
+                $user_data_for_response = $user_object->toAssocArray();
+                $user_data_for_response['id'] = $created_user_id;
+                unset($user_data_for_response['password']);
+                
+                return ResponseHelper::generateBuilder(true, 201, 'Sucesso no registro!', null, $user_data_for_response);
 
-            } catch (PDOException $err) {
+            } catch (\PDOException $err) {
                 return ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage());
 
-            } catch (Exception $err) {
+            } catch (\Exception $err) {
                 return ResponseHelper::generateBuilder(false, $err->getCode(), null, $err->getMessage());
             }
         }
@@ -86,7 +83,7 @@
                 $updated_user = $this->userModel->updateUserAndReturn($identifier, $user_object);
 
                 return ResponseHelper::generateBuilder(true, 200, 'Usuário atualizado com sucesso.', null, $updated_user);
-            } catch(Exception $err) {
+            } catch(\Exception $err) {
                 return ResponseHelper::generateBuilder(false, $err->getCode(), null, $err->getMessage());
             }
         }
@@ -95,7 +92,7 @@
             try {
                 $this->userModel->deleteUser($identifier);
                 return ResponseHelper::generateBuilder(true, 200, 'Usuário removido com sucesso.', null);
-            } catch(Exception $err) {
+            } catch(\Exception $err) {
                 return ResponseHelper::generateBuilder(false, $err->getCode(), null, $err->getMessage());
             }
         }
@@ -117,7 +114,7 @@
                 }
 
                 return $new_id;
-            } catch(Exception $err) {
+            } catch(\Exception $err) {
                 $error_response_builder = ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage());
                 ResponseHelper::buildAndRespond($error_response_builder);
             }

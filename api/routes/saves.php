@@ -5,10 +5,11 @@
 
     switch($method) {
         case 'GET':
-            if($save_id)
-                $response_builder = $s_controller->getSave($user_id, $save_id);
-            else
-                $response_builder = $s_controller->getSaves($user_id);
+            $response_builder = $s_controller->getSavesOfUser($user_id);
+            break;
+            
+        case 'POST':
+            $response_builder = $s_controller->createSave($user_id, $data);
             break;
     }
 

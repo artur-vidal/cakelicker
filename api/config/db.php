@@ -10,12 +10,12 @@
     $dbpassword = $_ENV['DB_PASSWORD'];
 
     try {
-        $conn = new PDO("mysql:host=$dbhost;charset=utf8", $dbuser, $dbpassword);
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $conn = new \PDO("mysql:host=$dbhost;charset=utf8", $dbuser, $dbpassword);
+        $conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
         $query_content = file_get_contents(__DIR__ .'\\..\\database\\schema.sql');
         $conn->exec($query_content);
-    } catch (PDOException $err) {
+    } catch (\PDOException $err) {
         $error_response_builder = ResponseHelper::generateBuilder(false, 500, 'Ocorreu um erro na conexão com o banco de dados.', $err->getMessage());
         ResponseHelper::buildAndRespond($error_response_builder);
     }

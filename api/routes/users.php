@@ -7,7 +7,7 @@
     $subresource = $endpoint_parts[2] ?? null;
 
     if($subresource !== null) {
-        if(!$user_id) {
+        if($user_id === null) {
             $error_response_builder = ResponseHelper::generateBuilder(false, 400, 'Sub-recursos precisam de especificação de identificador (ID ou username).', null);
             ResponseHelper::buildAndRespond($error_response_builder);
         }
@@ -28,7 +28,7 @@
 
         switch($method) {
             case 'GET':
-                if($user_id == null) {
+                if($user_id === null) {
                     $page = $_GET['page'] ?? 1;
                     $limit = $_GET['limit'] ?? 10;
                     $offset = $_GET['offset'] ?? 0;
