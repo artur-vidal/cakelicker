@@ -20,8 +20,8 @@
         }
 
         public function getSavesOfUser($user_identifier) {
-            if($user_identifier === null)
-                return ResponseHelper::generateBuilder(false, 404, 'Identificador de usuário inválido.', null);
+            if($user_identifier === null) 
+                return ResponseHelper::builder(false, 400, 'Usuário não informado.');
             
             try {
                 if(!is_numeric($user_identifier))
@@ -29,19 +29,18 @@
 
                 $saves_found = $this->saveModel->getSavesByUserId($user_identifier);
 
-                if($saves_found) {
-                    return ResponseHelper::generateBuilder(true, 200, 'Saves encontrados.', null, $saves_found);
-                } else {
-                    return ResponseHelper::generateBuilder(false, 404, 'Não foi encontrado nenhum save vinculado a esse usuário. Certifique-se de que o usuário em questão existe.', null, $user_identifier);
-                }
+                if($saves_found)
+                    return ResponseHelper::builder(true, 200, 'Saves encontrados.', null, $saves_found);
+                else
+                    return ResponseHelper::builder(false, 404, 'Não foi encontrado nenhum save vinculado a esse usuário. Certifique-se de que o usuário em questão existe.', null, $user_identifier);
             } catch(\PDOException $err) {
-                return ResponseHelper::generateBuilder(false, 500, 'Erro no banco de dados.', $err->getMessage());
+                return ResponseHelper::builder(false, 500, 'Erro no banco de dados.', $err->getMessage());
             }
         }
 
         public function createSave($user_identifier, $save_info = null) {
             if($user_identifier === null) 
-                return ResponseHelper::generateBuilder(false, 400, 'Usuário não informado.');
+                return ResponseHelper::builder(false, 400, 'Usuário não informado.');
 
             try {
 
@@ -52,7 +51,7 @@
                     $save_builder->fillFromAssocArray($save_info);
 
                     if(!$save_builder->isEmpty() && !$save_builder->isComplete())
-                        return ResponseHelper::generateBuilder(false, 400, 'Criação de save aceita apenas corpo de requisição vazio ou completo.', null, $save_info);
+                        return ResponseHelper::builder(false, 400, 'Criação de save aceita apenas corpo de requisição vazio ou completo.', null, $save_info);
 
                     $save_object = $save_builder->build();
                     $created_save_id = $this->saveModel->createSaveAndGetId($user_identifier, $save_object);
@@ -63,13 +62,23 @@
                     'userid' => $user_identifier
                 ];
 
-                return ResponseHelper::generateBuilder(true, 200, 'Save criado com sucesso!', null, $save_data_for_response);
+                return ResponseHelper::builder(true, 200, 'Save criado com sucesso!', null, $save_data_for_response);
 
             } catch(\Exception $err) {
-                return ResponseHelper::generateBuilder(false, $err->getCode(), null, $err->getMessage());
+                return ResponseHelper::builder(false, $err->getCode(), null, $err->getMessage());
 
             }
         }
+
+        public function cleanupSaves() {
+            try {
+                $saves_removed = $this->saveModel->removeUselessSavesAndGetCount();
+                return ResponseHelper::builder(true, 200, "$saves_removed saves inutilizados foram removidos com sucesso.", null);
+            } catch(\Exception $err) {
+                return ResponseHelper::builder(false, $err->getCode(), null, $err->getMessage());
+            }
+        }
+        
     }
 
 ?>

@@ -5,7 +5,7 @@
 
     class ResponseHelper {
         
-        public static function generateBuilder($success, $code, $message, $debug_message, $data = null) {
+        public static function builder($success, $code, $message, $debug_message, $data = null) {
             $debug_info = debug_backtrace();
 
             $responseBuilder = new ResponseBuilder(
@@ -19,9 +19,6 @@
                 ->addHeader('Content-Type', 'application/json')
                 ->addAdditionalField('caller_origin', $debug_info[0]['file'])
                 ->addAdditionalField('line_called', $debug_info[0]['line']);
-
-            if(!IS_LOCAL)
-                $responseBuilder->eraseSensitiveInfo();
 
             return $responseBuilder;
         }

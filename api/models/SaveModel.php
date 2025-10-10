@@ -111,13 +111,13 @@
                 $save_count_query->execute(['userid' => $user_id]);
 
                 $save_count = $save_count_query->fetch(\PDO::FETCH_COLUMN);
-                return $save_count > SAVES_PER_USER;
+                return $save_count >= SAVES_PER_USER;
             } catch(\Exception $err) {
                 throw $err;
             }
         }
 
-        public function removeUselessSaves() {
+        public function removeUselessSavesAndGetCount() {
             $total_removed = 0;
             $files = scandir($this->saveDir);
 

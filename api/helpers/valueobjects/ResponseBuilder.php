@@ -1,6 +1,7 @@
 <?php
 
     namespace Cakelicker\ValueObjects;
+    use Cakelicker\Helpers\ArrayHelper;
     use Cakelicker\ValueObjects\Response;
 
     class ResponseBuilder {
@@ -8,10 +9,10 @@
         private $success;
         private $code;
         private $message = null;
-        private $debug_message = null;
+        private $debugMessage = null;
         private $data = null;
         private $headers = null;
-        private $additional_fields = null;
+        private $additionalFields = null;
 
         public function __construct($success, $code) {
             $this->success = $success;
@@ -19,14 +20,17 @@
         }
 
         public function build() {
+            if(!IS_LOCAL)
+                $this->eraseSensitiveInfo();
+            
             return new Response(
                 $this->success,
                 $this->code,
                 $this->message,
-                $this->debug_message,
+                $this->debugMessage,
                 $this->data,
                 $this->headers,
-                $this->additional_fields
+                $this->additionalFields
             );
         }
 
@@ -36,7 +40,7 @@
         }
 
         public function setDebugMessage($debug_message) {
-            $this->debug_message = $debug_message;
+            $this->debugMessage = $debug_message;
             return $this;
         }
 
@@ -51,13 +55,37 @@
         }
 
         public function addAdditionalField($field_name, $field_value) {
-            $this->additional_fields[$field_name] = $field_value;
+            $this->additionalFields[$field_name] = $field_value;
             return $this;
         }
 
         public function eraseSensitiveInfo() {
-            $this->debug_message = false;
+            $this->debugMessage = null;
+
+            if(isset($this->additionalFields['caller_origin']))
+                unset($this->additionalFields['caller_origin']);
+
+            if(isset($this->additionalFields['line_called']))
+                unset($this->additionalFields['line_called']);
+
             return $this;
+        }
+
+        public function filterFields() {
+            if(isset($_GET['fields'])) {
+                $field_array = array_filter(explode(',', $_GET['fields']));
+
+                $filter = function($array) use ($field_array) {
+                    return ArrayHelper::filterArrayKeys($field_array, $array);
+                };
+
+                if(array_is_list($this->data))
+                    for($i = 0; $i < count($this->data); $i++) {
+                        $this->data[$i] = $filter($this->data[$i]);
+                    }
+                else
+                    $this->data = $filter($this->data);
+            }
         }
 
     }
